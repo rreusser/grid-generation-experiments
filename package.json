@@ -1,0 +1,26 @@
+{
+  "name": "hyperbolic-grid-generation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "watchify ./src/index.js -o ./dist/bundle.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "arc-length": "^1.0.2",
+    "bisect": "^1.0.0",
+    "canvas-fit": "^1.5.0",
+    "naca-four-digit-airfoil": "^1.0.3",
+    "ndarray": "^1.0.18",
+    "ndarray-ops": "^1.2.2",
+    "ndarray-scratch": "^1.2.0",
+    "ode-rk4": "^1.1.3",
+    "solve-periodic-tridiagonal": "^1.0.0"
+  },
+  "devDependencies": {
+    "watchify": "^3.7.0"
+  }
+}
