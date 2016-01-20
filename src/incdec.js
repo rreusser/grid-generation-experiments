@@ -1,6 +1,7 @@
 'use strict'
 
 var ops = require('ndarray-ops')
+var show = require('ndarray-show')
 
 module.exports = incdec
 
@@ -29,7 +30,7 @@ function incdec (out, t1, t2, n, r1, r2) {
 
   // Just in case you expect floating point equality:
   out.set(0, t1)
-  out.set(n - 1, t1)
+  //out.set(n - 1, t2)
 
   return out
 }
