@@ -9,33 +9,46 @@ var drawMesh = require('./draw-mesh')
 var pool = require('ndarray-scratch')
 var drawGrid = require('./draw-grid')
 var Viewport = require('./viewport')
-var show = require('ndarray-show')
 var linspace = require('ndarray-linspace')
+var measure = require('./measure')
+var prefixSum = require('ndarray-prefix-sum')
+var ops = require('ndarray-ops')
 
 var params = extend({
   naca: '8412',
 }, queryString.parse(location.search))
 
-var i
+// The grid dimensions. n = around, m = outward
 var n = 251
 var m = 100
+
+// Allocate the grid:
 var mesh = pool.zeros([m, 2, n])
+
+// eta is the independent variable around the o-grid:
 var eta = pool.zeros([n + 1])
-var dxi = linspace(0.003, m / 50 * 0.01, m)
+
+// xi is the independent variable outward:
 var xi = pool.zeros([m])
+ops.assign(xi.lo(1), linspace(0.003, m * 0.0002, m - 1))
+prefixSum(xi)
 
-var sum = 0
-for (i = 0; i < m; i++) {
-  xi.set(i, sum)
-  sum += dxi.get(i)
-}
-initializeMesh(params.naca, eta, mesh.pick(0), n, 10, 10)
+// Initialize the inner contour:
+measure('initialized',function () {
+  initializeMesh(params.naca, eta, mesh.pick(0), n, 10, 10)
+})
 
-marchMesh(eta, xi, mesh)
+// March the grid outward:
+measure('meshed',function () {
+  marchMesh(eta, xi, mesh)
+})
 
 function draw (v) {
   drawGrid(v, 0.1, 0.1, '#bbb')
-  drawMesh(v, mesh)
+
+  measure('drawn',function () {
+    drawMesh(v, mesh)
+  })
 }
 
 window.onload = function () {
@@ -45,5 +58,4 @@ window.onload = function () {
     aspectRatio: 1,
     draw: draw,
   })
-
 }

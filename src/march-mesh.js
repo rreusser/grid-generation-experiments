@@ -24,7 +24,8 @@ function hypDeriv (yp, y) {
   for (i = 0; i < this.n; i++) {
     dx = this.dxdeta[i]
     dy = this.dydeta[i]
-    var coeff =  - 1 / (dx * dx + dy * dy)
+    var ds2 = dx * dx + dy * dy
+    var coeff =  - 1 / ds2
     yp[i         ] = - coeff * dy + this.d2xdeta2[i] * 0.0005
     yp[i + this.n] =   coeff * dx + this.d2ydeta2[i] * 0.0005
   }
@@ -69,6 +70,7 @@ function marchMesh (eta, xi, mesh) {
 
   for (i = 1; i < m; i++) {
     integrator.dt = (xi.get(i) - xi.get(i - 1)) / divs
+    console.log('dt = ',integrator.dt)
     integrator.steps(divs)
 
     for (j = 0; j < n; j++) {

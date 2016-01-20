@@ -19,6 +19,7 @@
     "ndarray-fill": "^1.0.1",
     "ndarray-linspace": "^1.0.2",
     "ndarray-ops": "^1.2.2",
+    "ndarray-prefix-sum": "^1.0.0",
     "ndarray-scratch": "^1.2.0",
     "ndarray-show": "^2.0.0",
     "ode-euler": "^1.0.6",
