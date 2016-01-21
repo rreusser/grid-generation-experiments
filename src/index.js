@@ -12,25 +12,28 @@ var Viewport = require('./viewport')
 var linspace = require('ndarray-linspace')
 var measure = require('./measure')
 var prefixSum = require('ndarray-prefix-sum')
+var Mesher = require('./mesher')
 var ops = require('ndarray-ops')
 
-var params = extend({
+var params, m, n, mesh, eta, xi, mesher
+
+params = extend({
   naca: '8412',
 }, queryString.parse(location.search))
 
 // The grid dimensions. n = around, m = outward
-var n = 251
-var m = 100
+n = 251
+m = 60
 
 // Allocate the grid:
-var mesh = pool.zeros([m, 2, n])
+mesh = pool.zeros([m, 2, n])
 
 // eta is the independent variable around the o-grid:
-var eta = pool.zeros([n + 1])
+eta = pool.zeros([n + 1])
 
 // xi is the independent variable outward:
-var xi = pool.zeros([m])
-ops.assign(xi.lo(1), linspace(0.003, m * 0.0002, m - 1))
+xi = pool.zeros([m])
+ops.assign(xi.lo(1), linspace(0.002, m * 0.0002, m - 1))
 prefixSum(xi)
 
 // Initialize the inner contour:
@@ -38,9 +41,12 @@ measure('initialized',function () {
   initializeMesh(params.naca, eta, mesh.pick(0), n, 10, 10)
 })
 
-// March the grid outward:
+measure('initialized mesher',function () {
+  mesher = new Mesher(eta, xi, mesh)
+})
+
 measure('meshed',function () {
-  marchMesh(eta, xi, mesh)
+  mesher.march()
 })
 
 function draw (v) {
