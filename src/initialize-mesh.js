@@ -14,8 +14,8 @@ var show = require('ndarray-show')
 module.exports = initializeMesh
 
 function initializeMesh (code, eta, xy, n, ratio1, ratio2) {
-  var x = xy.pick(0)
-  var y = xy.pick(1)
+  var x = xy.pick(null, 0)
+  var y = xy.pick(null, 1)
   var airfoil = naca(code)
 
   var sUpper = function(x) {

@@ -6,7 +6,6 @@ var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
 
-module.exports = Viewport
 
 function Viewport (id, options) {
   var opts = extend({
@@ -16,8 +15,6 @@ function Viewport (id, options) {
     ymax: 1,
     aspectRatio: undefined,
     zoomSpeed: 0.01,
-    devicePixelRatio: window.devicePixelRatio,
-    antialias: true,
     getSize: function () {
       return {
         width: window.innerWidth,
@@ -37,7 +34,7 @@ function Viewport (id, options) {
   }.bind(this), false)
 
   this.renderer = new three.WebGLRenderer({
-    antialias: opts.antialias,
+    antialias: true,
     canvas: this.canvas,
   })
 
@@ -48,7 +45,7 @@ function Viewport (id, options) {
   this.mouse = {}
 
   this.renderer.setClearColor(new three.Color(0xffffff))
-  this.renderer.setPixelRatio(opts.devicePixelRatio)
+  this.renderer.setPixelRatio(window.devicePixelRatio)
   this.renderer.setSize(this.width, this.height)
 
   this.scene = new three.Scene()
@@ -60,6 +57,15 @@ function Viewport (id, options) {
 
   this.attachMouseWheel()
   this.attachMouseChange()
+
+  var geometry = new three.BufferGeometry()
+  geometry.setIndex(new three.BufferAttribute(new Uint16Array([0, 1, 2, 3]), 1))
+  geometry.addAttribute('position', new three.BufferAttribute(new Float32Array([-1, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0]), 3))
+  var material = new three.MeshBasicMaterial( { color: 0x000000 } );
+  var mesh = new three.LineSegments(geometry, material)
+  var node = new three.Object3D()
+  node.add(mesh)
+  this.scene.add(node)
 
   var render = function () {
     if (this.dirty) {
@@ -181,3 +187,8 @@ Viewport.prototype.applyAspectRatio = function () {
 
   this.camera.updateProjectionMatrix()
 }
+
+var v = new Viewport('canvas', {
+  aspectRatio: 1
+})
+window.v = v

@@ -1,39 +1,42 @@
 'use strict'
 
 var show = require('ndarray-show')
+var three = require('three')
 
 module.exports = function drawMesh (v, mesh) {
 
-  var x, y, xy, i, j
-  var n = mesh.shape[2]
-  var m = mesh.shape[0]
-  var ctx = v.ctx
+  var i, j, ind1, ind2, k1, k2
+  var n = mesh.shape[0]
+  var m = mesh.shape[1]
 
-  ctx.lineWidth = 2
-  ctx.strokeStyle = '#000'
-  for (j = 0; j < m; j++) {
-    ctx.beginPath()
-    xy = mesh.pick(j)
-    x = xy.pick(0)
-    y = xy.pick(1)
+  var indices = new Uint16Array(n * m * 2 + m * (n - 1) * 2)
 
-    ctx.moveTo(v.x2i(x.get(0)), v.y2j(y.get(0)))
-    for (i = 0; i < n; i++) {
-      ctx.lineTo(v.x2i(x.get(i)), v.y2j(y.get(i)))
+  var c = 0
+  for (j = 0; j < n; j++ ){
+    for (i = 0; i < m; i++) {
+      ind1 = j * m + i
+      ind2 = j * m + (i + 1) % m
+      indices[c++] = ind1
+      indices[c++] = ind2
     }
-    ctx.lineTo(v.x2i(x.get(0)), v.y2j(y.get(0)))
-    ctx.stroke()
   }
 
-  for (i = 0; i < n; i++) {
-    x = mesh.pick(null, 0, i)
-    y = mesh.pick(null, 1, i)
-
-    ctx.beginPath()
-    ctx.moveTo(v.x2i(x.get(0)), v.y2j(y.get(0)))
-    for (j = 0; j < m; j++) {
-      ctx.lineTo(v.x2i(x.get(j)), v.y2j(y.get(j)))
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n - 1; j++ ){
+      ind1 = j * m + i
+      ind2 = (j + 1) * m + i
+      indices[c++] = ind1
+      indices[c++] = ind2
     }
-    ctx.stroke()
   }
+
+  var geometry = new three.BufferGeometry()
+  geometry.addAttribute('position', new three.BufferAttribute(mesh.data, 3))
+  geometry.setIndex(new three.BufferAttribute(indices, 1))
+
+  var material = new three.MeshBasicMaterial( { color: 0x000000 } );
+  var mesh = new three.LineSegments(geometry, material)
+  var node = new three.Object3D()
+  node.add(mesh)
+  v.scene.add(node)
 }

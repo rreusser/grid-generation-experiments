@@ -12,7 +12,7 @@ function Mesher (eta, xi, mesh) {
   var x0, y0, x1, y1, dxdeta, dydeta, d2xdeta2, d2ydeta2, dx, dy, f
   this.mesh = mesh
   this.xi = xi
-  this.n = this.mesh.shape[2]
+  this.n = this.mesh.shape[1]
   this.m = this.xi.shape[0]
 
   var ddeta = new Derivative(1, this.n, eta.data)
@@ -45,11 +45,11 @@ function Mesher (eta, xi, mesh) {
 
 Mesher.prototype.march = function () {
   var i, j
-  var divs = 5
+  var divs = 20
 
   for (i = 0; i < this.n; i++) {
-    this.f[i] = this.mesh.get(0, 0, i)
-    this.f[i + this.n] = this.mesh.get(0, 1, i)
+    this.f[i] = this.mesh.get(0, i, 0)
+    this.f[i + this.n] = this.mesh.get(0, i, 1)
   }
 
   for (i = 1; i < this.m; i++) {
@@ -57,8 +57,8 @@ Mesher.prototype.march = function () {
     this.integrator.steps(divs)
 
     for (j = 0; j < this.n; j++) {
-      this.mesh.set(i, 0, j, this.f[j])
-      this.mesh.set(i, 1, j, this.f[j + this.n])
+      this.mesh.set(i, j, 0, this.f[j])
+      this.mesh.set(i, j, 1, this.f[j + this.n])
     }
   }
 }

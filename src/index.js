@@ -1,6 +1,8 @@
 /* global location, window */
 'use strict'
 
+var three = require('three')
+var show = require('ndarray-show')
 var queryString = require('query-string')
 var extend = require('util-extend')
 var initializeMesh = require('./initialize-mesh')
@@ -22,23 +24,23 @@ params = extend({
 }, queryString.parse(location.search))
 
 // The grid dimensions. n = around, m = outward
-n = 251
-m = 60
+n = 151
+m = 80
 
 // Allocate the grid:
-mesh = pool.zeros([m, 2, n])
+mesh = pool.zeros([m, n, 3], 'float32')
 
 // eta is the independent variable around the o-grid:
-eta = pool.zeros([n + 1])
+eta = pool.zeros([n + 1], 'float32')
 
 // xi is the independent variable outward:
-xi = pool.zeros([m])
-ops.assign(xi.lo(1), linspace(0.002, m * 0.0002, m - 1))
+xi = pool.zeros([m], 'float32')
+ops.assign(xi.lo(1), linspace(0.002, m / 50 * 0.0250, m - 1))
 prefixSum(xi)
 
 // Initialize the inner contour:
 measure('initialized',function () {
-  initializeMesh(params.naca, eta, mesh.pick(0), n, 10, 10)
+  initializeMesh(params.naca, eta, mesh.pick(0), n, 20, 20)
 })
 
 measure('initialized mesher',function () {
@@ -49,19 +51,25 @@ measure('meshed',function () {
   mesher.march()
 })
 
-function draw (v) {
-  drawGrid(v, 0.1, 0.1, '#bbb')
 
-  measure('drawn',function () {
-    drawMesh(v, mesh)
-  })
-}
 
-window.onload = function () {
-  new Viewport ('canvas', {
-    xmin: -0.1,
-    xmax: 1.1,
-    aspectRatio: 1,
-    draw: draw,
-  })
+var v = new Viewport ('canvas', {
+  xmin: -0.1,
+  xmax: 1.1,
+  ymin: 0.05,
+  ymax: 0.05,
+  aspectRatio: 1,
+  devicePixelRatio: window.devicePixelRatio,
+  antialias: false,
+})
+
+measure('drawn',function () {
+  drawMesh(v, mesh)
+  v.dirty = true
+})
+
+window.onunload = function () {
+  pool.free(mesh)
+  pool.free(eta)
+  pool.free(xi)
 }
