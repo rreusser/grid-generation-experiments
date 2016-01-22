@@ -5,8 +5,6 @@ module.exports = hyperbolicGridDerivative
 function hyperbolicGridDerivative (yp, y) {
   var i, dx, dy
 
-  var diffusion = 0.0008
-
   this.ddeta.compute(this.dxdeta, this.dydeta, y, 0, y, this.n)
   this.d2deta2.compute(this.d2xdeta2, this.d2ydeta2, y, 0, y, this.n)
 
@@ -15,8 +13,8 @@ function hyperbolicGridDerivative (yp, y) {
     dy = this.dydeta[i]
     var ds2 = dx * dx + dy * dy
     var coeff =  - 1 / ds2
-    yp[i         ] = - coeff * dy + this.d2xdeta2[i] * diffusion
-    yp[i + this.n] =   coeff * dx + this.d2ydeta2[i] * diffusion
+    yp[i         ] = - coeff * dy + this.d2xdeta2[i] * this.diffusion
+    yp[i + this.n] =   coeff * dx + this.d2ydeta2[i] * this.diffusion
   }
 
 }

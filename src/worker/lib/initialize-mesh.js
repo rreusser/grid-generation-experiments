@@ -1,22 +1,16 @@
 'use strict'
 
-var ndarray = require('ndarray')
-var rk4 = require('ode-rk4')
-var triper = require('solve-periodic-tridiagonal')
 var arcLength = require('arc-length')
 var bisect = require('bisect')
-var pool = require('ndarray-scratch')
-var ops = require('ndarray-ops')
 var incdec = require('./incdec')
 var naca = require('naca-four-digit-airfoil')
-var show = require('ndarray-show')
 
 module.exports = initializeMesh
 
-function initializeMesh (code, eta, xy, n, ratio1, ratio2) {
+function initializeMesh (airfoilData, eta, xy, m, ratio1, ratio2) {
   var x = xy.pick(null, 0)
   var y = xy.pick(null, 1)
-  var airfoil = naca(code)
+  var airfoil = naca(airfoilData)
 
   var sUpper = function(x) {
     return arcLength([airfoil.xUpper, airfoil.yUpper], 0, Math.max(1e-15, x), 1e-6, 1, 25)
@@ -42,7 +36,7 @@ function initializeMesh (code, eta, xy, n, ratio1, ratio2) {
   }
 
   var i
-  var nt = Math.floor((n + 2) / 2)
+  var nt = Math.floor((m + 2) / 2)
 
   var tUpper = eta.hi(nt)
   incdec(tUpper, 0, upperLength, nt, ratio1, ratio2)
@@ -64,8 +58,8 @@ function initializeMesh (code, eta, xy, n, ratio1, ratio2) {
     y.set(nt + i - 1, airfoil.yLower(xx))
   }
 
-  eta.set(n, eta.get(n - 1) +
-             Math.sqrt(Math.pow(x.get(n - 1) - x.get(0), 2) +
-             Math.pow(y.get(n - 1) - y.get(0), 2)))
+  eta.set(m, eta.get(m - 1) +
+             Math.sqrt(Math.pow(x.get(m - 1) - x.get(0), 2) +
+             Math.pow(y.get(m - 1) - y.get(0), 2)))
 }
 

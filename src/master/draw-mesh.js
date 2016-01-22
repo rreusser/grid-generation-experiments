@@ -3,10 +3,10 @@
 var show = require('ndarray-show')
 var three = require('three')
 
-module.exports = function drawMesh (v, mesh) {
+module.exports = function drawMesh (v, mesh, n) {
 
   var i, j, ind1, ind2, k1, k2
-  var n = mesh.shape[0]
+  n = n || mesh.shape[0]
   var m = mesh.shape[1]
 
   var indices = new Uint16Array(n * m * 2 + m * (n - 1) * 2)
@@ -39,4 +39,13 @@ module.exports = function drawMesh (v, mesh) {
   var node = new three.Object3D()
   node.add(mesh)
   v.scene.add(node)
+
+  return {
+    geometry: geometry,
+    destroy: function () {
+      geometry.dispose()
+      node.remove(mesh)
+      v.scene.remove(node)
+    }
+  }
 }
