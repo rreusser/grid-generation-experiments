@@ -37,6 +37,7 @@ var config = {
   diffusion: 0.001,
   stepStart: 0.002,
   stepEnd: 0.02,
+  clustering: 20,
 }
 
 var previousConfig
@@ -95,11 +96,17 @@ createDatGUI(config, {
   handlers: {
     airfoil: {
       change: function () {initializeMesh()},
-      finish: function () {createMesh()},
+      finish: function () {
+        initializeMesh()
+        createMesh()
+      },
     },
     m: {
       change: function () {initializeMesh()},
-      finish: function () {createMesh()},
+      finish: function () {
+        initializeMesh()
+        createMesh()
+      },
     },
     mesh: {
       change: function () {createMesh()}

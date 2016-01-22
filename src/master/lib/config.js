@@ -16,11 +16,21 @@ function createDatGUI (state, config) {
   var camberLocController = airfoilConfig.add(state, 'camberLoc', 0, 1).step(0.01)
   airfoilConfig.open()
 
+  var meshConfig = gui.addFolder('Mesh')
+  var mController = meshConfig.add(state, 'm', 11, 151).step(1)
+  var nController = meshConfig.add(state, 'n', 3, 80).step(1)
+  var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
+  var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
+  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 0.03)
+  var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
+  meshConfig.open()
+
   var airfoilHandlers = config.handlers.airfoil
   if (airfoilHandlers.change) {
     thicknessController.onChange(airfoilHandlers.change)
     camberMagController.onChange(airfoilHandlers.change)
     camberLocController.onChange(airfoilHandlers.change)
+    clusteringController.onChange(airfoilHandlers.change)
   }
 
   if (airfoilHandlers.finish) {
@@ -30,15 +40,8 @@ function createDatGUI (state, config) {
 
     camberMagController.onFinishChange(airfoilHandlers.finish)
     camberLocController.onFinishChange(airfoilHandlers.finish)
+    clusteringController.onFinishChange(airfoilHandlers.finish)
   }
-
-  var meshConfig = gui.addFolder('Mesh')
-  var mController = meshConfig.add(state, 'm', 11, 151).step(1)
-  var nController = meshConfig.add(state, 'n', 3, 80).step(1)
-  var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
-  var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
-  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 0.03)
-  meshConfig.open()
 
   if (config.handlers.m) {
     if (config.handlers.m.change) {

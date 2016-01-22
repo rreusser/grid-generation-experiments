@@ -29,7 +29,7 @@ var eventLoop = new EventLoop({
         t: data.thickness,
         m: data.camberMag,
         p: data.camberLoc,
-      }, eta, mesh.pick(0), m, 20, 20)
+      }, eta, mesh.pick(0), m, data.clustering, data.clustering)
 
       cb({
         mesh: mesh,
