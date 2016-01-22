@@ -41520,59 +41520,6 @@ function extend(origin, add) {
 }
 
 },{}],48:[function(require,module,exports){
-'use strict'
-
-var show = require('ndarray-show')
-var three = require('three')
-
-module.exports = function drawMesh (v, mesh, n) {
-
-  var i, j, ind1, ind2, k1, k2
-  n = n || mesh.shape[0]
-  var m = mesh.shape[1]
-
-  var indices = new Uint16Array(n * m * 2 + m * (n - 1) * 2)
-
-  var c = 0
-  for (j = 0; j < n; j++ ){
-    for (i = 0; i < m; i++) {
-      ind1 = j * m + i
-      ind2 = j * m + (i + 1) % m
-      indices[c++] = ind1
-      indices[c++] = ind2
-    }
-  }
-
-  for (i = 0; i < m; i++) {
-    for (j = 0; j < n - 1; j++ ){
-      ind1 = j * m + i
-      ind2 = (j + 1) * m + i
-      indices[c++] = ind1
-      indices[c++] = ind2
-    }
-  }
-
-  var geometry = new three.BufferGeometry()
-  geometry.addAttribute('position', new three.BufferAttribute(mesh.data, 3))
-  geometry.setIndex(new three.BufferAttribute(indices, 1))
-
-  var material = new three.MeshBasicMaterial( { color: 0x000000 } );
-  var mesh = new three.LineSegments(geometry, material)
-  var node = new three.Object3D()
-  node.add(mesh)
-  v.scene.add(node)
-
-  return {
-    geometry: geometry,
-    destroy: function () {
-      geometry.dispose()
-      node.remove(mesh)
-      v.scene.remove(node)
-    }
-  }
-}
-
-},{"ndarray-show":37,"three":46}],49:[function(require,module,exports){
 /* global location, window */
 'use strict'
 
@@ -41582,10 +41529,10 @@ var queryString = require('query-string')
 var pool = require('ndarray-scratch')
 var extend = require('util-extend')
 var WorkDispatcher = require('./lib/work-dispatcher')
-var Viewport = require('./viewport')
+var Viewport = require('./lib/viewport')
 var naca = require('naca-four-digit-airfoil')
 var createDatGUI = require('./lib/config')
-var drawMesh = require('./draw-mesh')
+var drawMesh = require('./lib/draw-mesh')
 var equals = require('shallow-equals')
 
 window.ndarray = require('ndarray')
@@ -41701,7 +41648,7 @@ var v = new Viewport ('canvas', {
 
 initializeMesh(createMesh)
 
-},{"./draw-mesh":48,"./lib/config":50,"./lib/work-dispatcher":51,"./viewport":52,"naca-four-digit-airfoil":27,"ndarray":40,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],50:[function(require,module,exports){
+},{"./lib/config":49,"./lib/draw-mesh":50,"./lib/viewport":51,"./lib/work-dispatcher":52,"naca-four-digit-airfoil":27,"ndarray":40,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],49:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -41773,101 +41720,60 @@ function createDatGUI (state, config) {
 
 }
 
-},{"util-extend":47}],51:[function(require,module,exports){
+},{"util-extend":47}],50:[function(require,module,exports){
 'use strict'
 
-var extend = require('util-extend')
-var eventEmitter = require('event-emitter')
-var guid = require('guid').raw
+var show = require('ndarray-show')
+var three = require('three')
 
-module.exports = WorkDispatcher
+module.exports = function drawMesh (v, mesh, n) {
 
-var defaults = {
-  handlers: {}
-}
+  var i, j, ind1, ind2, k1, k2
+  n = n || mesh.shape[0]
+  var m = mesh.shape[1]
 
-function WorkDispatcher (workerCodePath, config) {
-  eventEmitter(this)
+  var indices = new Uint16Array(n * m * 2 + m * (n - 1) * 2)
 
-  var opts = extend({}, defaults)
-  extend(opts, config)
-
-  this.handlers = opts.handlers
-  this.worker = new Worker(workerCodePath)
-  this.worker.postMessage = this.worker.webkitPostMessage || this.worker.postMessage;
-
-  this.start()
-
-  //this.on('request', this.request)
-
-  this.promises = {}
-  this.taskCounts = {}
-}
-
-WorkDispatcher.prototype.getTaskCount = function (task) {
-  if (this.taskCounts[task] === undefined) {
-    return 0
-  } else {
-    return this.taskCounts[task]
-  }
-}
-
-WorkDispatcher.prototype.incTaskCount = function (task) {
-  if (this.taskCounts[task] === undefined) {
-    this.taskCounts[task] = 1
-  } else {
-    this.taskCounts[task]++
-  }
-}
-
-WorkDispatcher.prototype.decTaskCount = function (task) {
-  if (this.taskCounts[task] === undefined) {
-    this.taskCounts[task] = 0
-  } else {
-    this.taskCounts[task]--
-  }
-}
-
-WorkDispatcher.prototype.request = function (task, data, transfer) {
-  if (this.getTaskCount(task) > 0) return Promise.reject()
-  var taskId = guid()
-
-  this.incTaskCount(task)
-
-  this.worker.postMessage({
-    taskId: taskId,
-    task: task,
-    data: data
-  }, transfer)
-
-  return new Promise(function (resolve, reject) {
-    this.promises[taskId] = resolve
-  }.bind(this))
-}
-
-WorkDispatcher.prototype.start = function (task, data) {
-  this.worker.addEventListener('message', function (event) {
-    if (!event.isTrusted) {
-      console.warn('Ignoring untrusted event from origin',event.origin)
-      return
+  var c = 0
+  for (j = 0; j < n; j++ ){
+    for (i = 0; i < m; i++) {
+      ind1 = j * m + i
+      ind2 = j * m + (i + 1) % m
+      indices[c++] = ind1
+      indices[c++] = ind2
     }
-    var data = event.data
-    var handler = this.handlers[data.task]
-    this.decTaskCount(data.task)
+  }
 
-    if (handler) {
-      handler(data.data)
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n - 1; j++ ){
+      ind1 = j * m + i
+      ind2 = (j + 1) * m + i
+      indices[c++] = ind1
+      indices[c++] = ind2
     }
+  }
 
-    var taskId = data.taskId
-    var resolve = this.promises[data.taskId]
-    delete this.promises[data.taskId]
+  var geometry = new three.BufferGeometry()
+  geometry.addAttribute('position', new three.BufferAttribute(mesh.data, 3))
+  geometry.setIndex(new three.BufferAttribute(indices, 1))
 
-    resolve && resolve(data.data)
-  }.bind(this), false)
+  var material = new three.MeshBasicMaterial( { color: 0x000000 } );
+  var mesh = new three.LineSegments(geometry, material)
+  var node = new three.Object3D()
+  node.add(mesh)
+  v.scene.add(node)
+
+  return {
+    geometry: geometry,
+    destroy: function () {
+      geometry.dispose()
+      node.remove(mesh)
+      v.scene.remove(node)
+    }
+  }
 }
 
-},{"event-emitter":5,"guid":20,"util-extend":47}],52:[function(require,module,exports){
+},{"ndarray-show":37,"three":46}],51:[function(require,module,exports){
 'use strict'
 
 var three = require('three')
@@ -42052,4 +41958,98 @@ Viewport.prototype.applyAspectRatio = function () {
   this.camera.updateProjectionMatrix()
 }
 
-},{"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}]},{},[49]);
+},{"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}],52:[function(require,module,exports){
+'use strict'
+
+var extend = require('util-extend')
+var eventEmitter = require('event-emitter')
+var guid = require('guid').raw
+
+module.exports = WorkDispatcher
+
+var defaults = {
+  handlers: {}
+}
+
+function WorkDispatcher (workerCodePath, config) {
+  eventEmitter(this)
+
+  var opts = extend({}, defaults)
+  extend(opts, config)
+
+  this.handlers = opts.handlers
+  this.worker = new Worker(workerCodePath)
+  this.worker.postMessage = this.worker.webkitPostMessage || this.worker.postMessage;
+
+  this.start()
+
+  //this.on('request', this.request)
+
+  this.promises = {}
+  this.taskCounts = {}
+}
+
+WorkDispatcher.prototype.getTaskCount = function (task) {
+  if (this.taskCounts[task] === undefined) {
+    return 0
+  } else {
+    return this.taskCounts[task]
+  }
+}
+
+WorkDispatcher.prototype.incTaskCount = function (task) {
+  if (this.taskCounts[task] === undefined) {
+    this.taskCounts[task] = 1
+  } else {
+    this.taskCounts[task]++
+  }
+}
+
+WorkDispatcher.prototype.decTaskCount = function (task) {
+  if (this.taskCounts[task] === undefined) {
+    this.taskCounts[task] = 0
+  } else {
+    this.taskCounts[task]--
+  }
+}
+
+WorkDispatcher.prototype.request = function (task, data, transfer) {
+  if (this.getTaskCount(task) > 0) return Promise.reject()
+  var taskId = guid()
+
+  this.incTaskCount(task)
+
+  this.worker.postMessage({
+    taskId: taskId,
+    task: task,
+    data: data
+  }, transfer)
+
+  return new Promise(function (resolve, reject) {
+    this.promises[taskId] = resolve
+  }.bind(this))
+}
+
+WorkDispatcher.prototype.start = function (task, data) {
+  this.worker.addEventListener('message', function (event) {
+    if (!event.isTrusted) {
+      console.warn('Ignoring untrusted event from origin',event.origin)
+      return
+    }
+    var data = event.data
+    var handler = this.handlers[data.task]
+    this.decTaskCount(data.task)
+
+    if (handler) {
+      handler(data.data)
+    }
+
+    var taskId = data.taskId
+    var resolve = this.promises[data.taskId]
+    delete this.promises[data.taskId]
+
+    resolve && resolve(data.data)
+  }.bind(this), false)
+}
+
+},{"event-emitter":5,"guid":20,"util-extend":47}]},{},[48]);
