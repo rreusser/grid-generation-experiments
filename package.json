@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "watchify ./src/index.js -o ./dist/bundle.js"
+    "start": "watchify ./src/master/index.js -o ./dist/master-bundle.js",
+    "watch-worker": "watchify ./src/worker/index.js -o ./dist/worker-bundle.js",
+    "build-example": "browserify src/index.js -o dist/bundle.js && cp src/*.html dist && cp node_modules/dat.gui/build/dat.gui.min.js dist/",
+    "deploy-example": "gh-pages -d dist"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +16,7 @@
     "arc-length": "^1.0.2",
     "bisect": "^1.0.0",
     "canvas-fit": "^1.5.0",
+    "dat.gui": "^0.6.1",
     "finite-difference-stencil": "^1.0.2",
     "gl-plot2d": "^1.1.6",
     "mouse-change": "^1.2.1",
@@ -35,6 +39,7 @@
     "util-extend": "^1.0.3"
   },
   "devDependencies": {
+    "gh-pages": "^0.8.0",
     "watchify": "^3.7.0"
   }
 }

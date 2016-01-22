@@ -1,15 +1,14 @@
-/* global location, window */
-'use strict'
+console.log('hello, world')
 
-var three = require('three')
-var show = require('ndarray-show')
-var queryString = require('query-string')
-var extend = require('util-extend')
+addEventListener('message', function (args) {
+  console.log('got message', args)
+}, false)
+
+function processMessage () {
+}
+
 var initializeMesh = require('./initialize-mesh')
-var drawMesh = require('./draw-mesh')
 var pool = require('ndarray-scratch')
-var drawGrid = require('./draw-grid')
-var Viewport = require('./viewport')
 var linspace = require('ndarray-linspace')
 var measure = require('./measure')
 var prefixSum = require('ndarray-prefix-sum')
@@ -17,10 +16,6 @@ var Mesher = require('./mesher')
 var ops = require('ndarray-ops')
 
 var params, m, n, mesh, eta, xi, mesher
-
-params = extend({
-  naca: '8412',
-}, queryString.parse(location.search))
 
 // The grid dimensions. n = around, m = outward
 n = 151
@@ -62,13 +57,3 @@ var v = new Viewport ('canvas', {
   antialias: false,
 })
 
-measure('drawn',function () {
-  drawMesh(v, mesh)
-  v.dirty = true
-})
-
-window.onunload = function () {
-  pool.free(mesh)
-  pool.free(eta)
-  pool.free(xi)
-}
