@@ -41595,23 +41595,23 @@ function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.
 var params
 
 params = extend({
-  naca: '2412',
+  naca: '9412',
   m: 151,
-  n: 80,
+  n: 100,
 }, queryString.parse(location.search))
-var airfoil = naca.parse(params.naca)
+//var airfoil = naca.parse(params.naca)
 
 var dispatcher = new WorkDispatcher('worker-bundle.js')
 
 var config = {
-  thickness: airfoil.t,
-  camberMag: airfoil.m,
-  camberLoc: airfoil.p,
+  thickness: 0.12,
+  camberMag: 0.15,
+  camberLoc: 0.4,
   m: Number(params.m),
   n: Number(params.n),
   diffusion: 0.001,
   stepStart: 0.002,
-  stepEnd: 0.02,
+  stepEnd: 0.1,
   clustering: 20,
 }
 
@@ -41690,10 +41690,10 @@ createDatGUI(config, {
 })
 
 var v = new Viewport ('canvas', {
-  xmin: -0.1,
-  xmax: 1.1,
-  ymin: 0.05,
-  ymax: 0.05,
+  xmin: -0.6,
+  xmax: 1.6,
+  ymin: 0.15,
+  ymax: 0.15,
   aspectRatio: 1,
   devicePixelRatio: window.devicePixelRatio,
   antialias: false,
@@ -41722,10 +41722,10 @@ function createDatGUI (state, config) {
 
   var meshConfig = gui.addFolder('Mesh')
   var mController = meshConfig.add(state, 'm', 11, 151).step(1)
-  var nController = meshConfig.add(state, 'n', 3, 80).step(1)
+  var nController = meshConfig.add(state, 'n', 3, 300).step(1)
   var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
   var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
-  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 0.03)
+  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 1.0)
   var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
   meshConfig.open()
 
