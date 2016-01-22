@@ -1,12 +1,3 @@
-console.log('hello, world')
-
-addEventListener('message', function (args) {
-  console.log('got message', args)
-}, false)
-
-function processMessage () {
-}
-
 var initializeMesh = require('./initialize-mesh')
 var pool = require('ndarray-scratch')
 var linspace = require('ndarray-linspace')
@@ -22,13 +13,13 @@ n = 151
 m = 80
 
 // Allocate the grid:
-mesh = pool.zeros([m, n, 3], 'float32')
+mesh = ndarray(new Float32Array(m * n * 3), [m, n, 3])
 
 // eta is the independent variable around the o-grid:
-eta = pool.zeros([n + 1], 'float32')
+eta = ndarray(new Float32Array(n + 1), [n + 1])
 
 // xi is the independent variable outward:
-xi = pool.zeros([m], 'float32')
+xi = ndarray(new Float32Array(m), [m])
 ops.assign(xi.lo(1), linspace(0.002, m / 50 * 0.0250, m - 1))
 prefixSum(xi)
 
@@ -44,8 +35,6 @@ measure('initialized mesher',function () {
 measure('meshed',function () {
   mesher.march()
 })
-
-
 
 var v = new Viewport ('canvas', {
   xmin: -0.1,

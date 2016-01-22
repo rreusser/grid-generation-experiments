@@ -8,7 +8,7 @@ var hyperbolicGridDerivative = require('./hyperbolic-grid-derivative')
 
 module.exports = Mesher
 
-function Mesher (eta, xi, mesh) {
+function Mesher (eta, xi, mesh, diffusion) {
   var x0, y0, x1, y1, dxdeta, dydeta, d2xdeta2, d2ydeta2, dx, dy, f
   this.mesh = mesh
   this.xi = xi
@@ -34,6 +34,7 @@ function Mesher (eta, xi, mesh) {
     d2xdeta2: d2xdeta2,
     d2ydeta2: d2ydeta2,
     n: this.n,
+    diffusion: diffusion,
   })
 
   this.integrator = ode4(this.f, deriv, 0, 0.1)
