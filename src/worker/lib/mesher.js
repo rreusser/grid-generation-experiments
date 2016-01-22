@@ -19,6 +19,7 @@ function Mesher (eta, xi, mesh, diffusion) {
   var d2deta2 = new Derivative(2, this.n, eta.data)
 
   this.f = new Float64Array(this.n * 2)
+  this.diffusion = diffusion
 
   // Work arrays
   dxdeta = new Float64Array(this.n)
@@ -54,7 +55,20 @@ Mesher.prototype.march = function () {
   }
 
   for (i = 1; i < this.m; i++) {
-    this.integrator.dt = (this.xi.get(i) - this.xi.get(i - 1)) / divs
+
+    var c1 = 1
+    var c2 = this.diffusion
+    var dx = 1 / this.n
+
+    var dt1 = dx / c1 * 0.1
+    var dt2 = Math.sqrt(dx / c2) * 0.002
+
+    var dxi = this.xi.get(i) - this.xi.get(i - 1)
+
+    var divs = Math.floor(Math.max(dxi / dt1, dxi / dt2))
+    //console.log(divs)
+
+    this.integrator.dt = dxi / divs
     this.integrator.steps(divs)
 
     for (j = 0; j < this.n; j++) {

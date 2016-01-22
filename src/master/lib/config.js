@@ -18,10 +18,10 @@ function createDatGUI (state, config) {
 
   var meshConfig = gui.addFolder('Mesh')
   var mController = meshConfig.add(state, 'm', 11, 151).step(1)
-  var nController = meshConfig.add(state, 'n', 3, 80).step(1)
+  var nController = meshConfig.add(state, 'n', 3, 300).step(1)
   var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
   var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
-  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 0.03)
+  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 1.0)
   var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
   meshConfig.open()
 
