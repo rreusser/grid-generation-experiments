@@ -31,7 +31,7 @@ function WorkerState () {
         changes.n ||
         changes.diffusion ||
         changes.stepStart ||
-        changes.stepEnd ||
+        changes.stepInc ||
         changes.clustering) {
       this.needsMesh = true
 
@@ -64,8 +64,12 @@ WorkerState.prototype.createMesh = function (data) {
   var m = this.state.m
   var n = this.xi.shape[0]
 
-  linspace(this.xi.lo(1), this.state.stepStart, this.state.stepEnd, n - 1)
-  prefixSum(this.xi)
+  var dxi = this.state.stepStart
+  this.xi.set(0, 0)
+  for (var i = 1; i < m; i++) {
+    this.xi.set(i, this.xi.get(i - 1) + dxi)
+    dxi += this.state.stepInc
+  }
 
   this.mesher.diffusion = this.state.diffusion
   this.mesher.march()

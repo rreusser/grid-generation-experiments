@@ -20,7 +20,7 @@ function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.
 var params
 
 params = extend({
-  naca: '9412',
+  naca: null,
   m: 151,
   n: 50,
 }, queryString.parse(location.search))
@@ -35,8 +35,15 @@ var config = {
   n: Number(params.n),
   diffusion: 0.001,
   stepStart: 0.002,
-  stepEnd: 0.1,
+  stepInc: 0.001,
   clustering: 20,
+}
+
+if (naca.isValid(params.naca)) {
+  var airfoil = naca.parse(params.naca)
+  config.thickness = airfoil.t
+  config.camberMag = airfoil.m
+  config.camberLoc = airfoil.p
 }
 
 var mesh, eta, xi
@@ -91,18 +98,15 @@ createDatGUI(config, {
     airfoil: {
       change: function () {initializeMesh()},
       finish: function () {
-        console.log('finish!')
         initializeMesh(null, true)
         createMesh(null, true)
       },
     },
     mesh: {
       change: function () {
-        console.log('chane!')
         createMesh()
       },
       finish: function () {
-        console.log('finish!')
         createMesh(null, true)
       },
     },
@@ -112,8 +116,8 @@ createDatGUI(config, {
 var v = new Viewport ('canvas', {
   xmin: -0.6,
   xmax: 1.6,
-  ymin: 0.15,
-  ymax: 0.15,
+  ymin: 0.15 - 1,
+  ymax: 0.15 + 1,
   aspectRatio: 1,
   devicePixelRatio: window.devicePixelRatio,
   antialias: false,

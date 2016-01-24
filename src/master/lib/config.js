@@ -21,7 +21,7 @@ function createDatGUI (state, config) {
   var nController = meshConfig.add(state, 'n', 3, 300).step(1)
   var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
   var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
-  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 1.0)
+  var stepIncController = meshConfig.add(state, 'stepInc', 0, 0.01)
   var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
   meshConfig.open()
 
@@ -47,14 +47,14 @@ function createDatGUI (state, config) {
       nController.onChange(mesh.change)
       diffusionController.onChange(mesh.change)
       stepStartController.onChange(mesh.change)
-      stepEndController.onChange(mesh.change)
+      stepIncController.onChange(mesh.change)
     }
     if (mesh.finish) {
       mController.onFinishChange(mesh.finish)
       nController.onFinishChange(mesh.finish)
       diffusionController.onFinishChange(mesh.finish)
       stepStartController.onFinishChange(mesh.finish)
-      stepEndController.onFinishChange(mesh.finish)
+      stepIncController.onFinishChange(mesh.finish)
     }
   }
 }

@@ -1,10 +1,15 @@
 'use strict'
 
+var Detector = require('./threejs-detector.js')
 var three = require('three')
 var extend = require('util-extend')
 var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
+
+//window.THREE = three
+//require('three/examples/js/renderers/Projector')
+//require('three/examples/js/renderers/CanvasRenderer')
 
 module.exports = Viewport
 
@@ -36,16 +41,30 @@ function Viewport (id, options) {
     this.render()
   }.bind(this), false)
 
-  this.renderer = new three.WebGLRenderer({
-    antialias: opts.antialias,
-    canvas: this.canvas,
-  })
+  if (Detector.webgl) {
+    this.renderer = new three.WebGLRenderer({
+      antialias: opts.antialias,
+      canvas: this.canvas,
+    })
+  } else {
+    Detector.addGetWebGLMessage()
+    /*this.renderer = new window.THREE.CanvasRenderer({
+      antialias: opts.antialias,
+      canvas: this.canvas,
+    })*/
+    return
+  }
 
   var size = this.getSize()
   this.width = size.width
   this.height = size.height
 
-  this.mouse = {}
+  this.mouse = {
+    x: 0.5 * (opts.xmin + opts.xmax),
+    y: 0.5 * (opts.ymin + opts.ymax),
+    i: this.width / 2,
+    j: this.height / 2,
+  }
 
   this.renderer.setClearColor(new three.Color(0xffffff))
   this.renderer.setPixelRatio(opts.devicePixelRatio)
@@ -72,6 +91,7 @@ function Viewport (id, options) {
   render()
 }
 Viewport.prototype.attachMouseChange = function () {
+  var initialized = false
   mouseChange(this.canvas, function(buttons, i, j, mods) {
     this.mouse.i = i
     this.mouse.j = j
@@ -86,9 +106,10 @@ Viewport.prototype.attachMouseChange = function () {
     this.mouse.control = mods.control
     this.mouse.meta = mods.meta
 
-    if (buttons === 1) {
+    if (buttons === 1 && initialized) {
       this.pan(dx, dy)
     }
+    initialized = true
   }.bind(this))
 }
 
@@ -163,6 +184,8 @@ Viewport.prototype.setBounds = function (xmin, xmax, ymin, ymax) {
 
   this.mouse.x = this.camera.left + this.mouse.i * this.xscale
   this.mouse.y = this.camera.top + this.mouse.j * this.yscale
+
+  this.camera.updateProjectionMatrix()
 }
 
 Viewport.prototype.computeScale = function () {
@@ -178,6 +201,4 @@ Viewport.prototype.applyAspectRatio = function () {
   var dy = dx * this.aspectRatio * this.height / this.width
   this.camera.bottom = yc - dy
   this.camera.top = yc + dy
-
-  this.camera.updateProjectionMatrix()
 }
