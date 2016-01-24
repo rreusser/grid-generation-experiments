@@ -23,20 +23,27 @@ params = extend({
   naca: null,
   m: 151,
   n: 50,
+  thickness: 0.12,
+  camberMag: 0.05,
+  camberLoc: 0.4,
+  stepInc: 0.001,
+  stepStart: 0.002,
+  diffusion: 0.001,
+  clustering: 20,
 }, queryString.parse(location.search))
 
 var dispatcher = new WorkDispatcher('worker-bundle.js')
 
 var config = {
-  thickness: 0.12,
-  camberMag: 0.15,
-  camberLoc: 0.4,
+  thickness: Number(params.thickness),
+  camberMag: Number(params.camberMag),
+  camberLoc: Number(params.camberLoc),
   m: Number(params.m),
   n: Number(params.n),
-  diffusion: 0.001,
-  stepStart: 0.002,
-  stepInc: 0.001,
-  clustering: 20,
+  diffusion: Number(params.diffusion),
+  stepStart: Number(params.stepStart),
+  stepInc: Number(params.stepInc),
+  clustering: Number(params.clustering),
 }
 
 if (naca.isValid(params.naca)) {
