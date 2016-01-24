@@ -25,46 +25,36 @@ function createDatGUI (state, config) {
   var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
   meshConfig.open()
 
-  var airfoilHandlers = config.handlers.airfoil
-  if (airfoilHandlers.change) {
-    thicknessController.onChange(airfoilHandlers.change)
-    camberMagController.onChange(airfoilHandlers.change)
-    camberLocController.onChange(airfoilHandlers.change)
-    clusteringController.onChange(airfoilHandlers.change)
+  var init = config.handlers.airfoil
+  if (init.change) {
+    thicknessController.onChange(init.change)
+    camberMagController.onChange(init.change)
+    camberLocController.onChange(init.change)
+    clusteringController.onChange(init.change)
   }
 
-  if (airfoilHandlers.finish) {
-    thicknessController.onFinishChange(function () {
-      airfoilHandlers.finish()
-    })
-
-    camberMagController.onFinishChange(airfoilHandlers.finish)
-    camberLocController.onFinishChange(airfoilHandlers.finish)
-    clusteringController.onFinishChange(airfoilHandlers.finish)
+  if (init.finish) {
+    thicknessController.onFinishChange(init.finish)
+    camberMagController.onFinishChange(init.finish)
+    camberLocController.onFinishChange(init.finish)
+    clusteringController.onFinishChange(init.finish)
   }
 
-  if (config.handlers.m) {
-    if (config.handlers.m.change) {
-      mController.onChange(config.handlers.m.change)
+  var mesh = config.handlers.mesh
+  if (mesh) {
+    if (mesh.change) {
+      mController.onChange(mesh.change)
+      nController.onChange(mesh.change)
+      diffusionController.onChange(mesh.change)
+      stepStartController.onChange(mesh.change)
+      stepEndController.onChange(mesh.change)
     }
-    if (config.handlers.m.finish) {
-      mController.onFinishChange(config.handlers.m.finish)
-    }
-  }
-
-  if (config.handlers.mesh) {
-    if (config.handlers.mesh.change) {
-      nController.onChange(config.handlers.mesh.change)
-      diffusionController.onChange(config.handlers.mesh.change)
-      stepStartController.onChange(config.handlers.mesh.change)
-      stepEndController.onChange(config.handlers.mesh.change)
-    }
-    if (config.handlers.mesh.finish) {
-      nController.onFinishChange(config.handlers.mesh.finish)
-      diffusionController.onFinishChange(config.handlers.mesh.finish)
-      stepStartController.onFinishChange(config.handlers.mesh.finish)
-      stepEndController.onFinishChange(config.handlers.mesh.finish)
+    if (mesh.finish) {
+      mController.onFinishChange(mesh.finish)
+      nController.onFinishChange(mesh.finish)
+      diffusionController.onFinishChange(mesh.finish)
+      stepStartController.onFinishChange(mesh.finish)
+      stepEndController.onFinishChange(mesh.finish)
     }
   }
-
 }

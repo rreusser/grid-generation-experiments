@@ -1,63 +1,38 @@
 'use strict'
 
 var EventLoop = require('./lib/event-loop')
-var ndarray = require('ndarray')
-var prefixSum = require('ndarray-prefix-sum')
-var initializeMesh = require('./lib/initialize-mesh')
-var linspace = require('ndarray-linspace')
-var ops = require('ndarray-ops')
-var Mesher = require('./lib/mesher')
-var show = require('ndarray-show')
+var WorkerState = require('./lib/worker-state')
 
-function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.offset)}
-
-var mesher
+var w = new WorkerState()
 
 var eventLoop = new EventLoop({
   handlers: {
     initializeGrid: function (data, cb) {
-      //console.log('Initializing NACA airfoil', data)
-
-      var airfoil = data.airfoil
-      var m = data.m
-      var n = data.n
-
-      var mesh = ndarray(new Float32Array(n * m * 3), [n, m, 3])
-      var eta = ndarray(new Float32Array(m + 1), [m + 1])
-
-      initializeMesh({
-        t: data.thickness,
-        m: data.camberMag,
-        p: data.camberLoc,
-      }, eta, mesh.pick(0), m, data.clustering, data.clustering)
-
+      w.setState(data.params)
+      if (w.needsInitialization) {
+        w.initialize()
+      }
       cb({
-        mesh: mesh,
-        eta: eta,
-      })//, [mesh.data.buffer, eta.data.buffer])
+        mesh: w.mesh,
+        eta: w.eta,
+      })
     },
     createMesh: function (data, cb) {
-      var airfoil = data.airfoil
-      var m = data.m
-      var n = data.n
+      w.setState(data.params)
 
-      var mesh = ndarray(new Float32Array(n * m * 3), [n, m, 3])
-      ops.assign(mesh.pick(0), coerce(data.initial))
-      var eta = coerce(data.eta)
+      if (w.needsInitialization) {
+        w.initialize()
+      }
 
-      var xi = ndarray(new Float32Array(n), [n])
-
-      ops.assign(xi.lo(1), linspace(data.stepStart, data.stepEnd, n - 1))
-      prefixSum(xi)
-
-      mesher = new Mesher(eta, xi, mesh, data.diffusion)
-
-      mesher.march()
+      w.createMesh(data)
 
       cb({
-        mesh: mesher.mesh
+        mesh: w.mesh,
+        eta: w.eta,
+        xi: w.xi,
+        n: w.state.n,
+        m: w.state.m,
       })
-
     },
   }
 })

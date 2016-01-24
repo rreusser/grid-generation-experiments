@@ -22,9 +22,8 @@ var params
 params = extend({
   naca: '9412',
   m: 151,
-  n: 100,
+  n: 50,
 }, queryString.parse(location.search))
-//var airfoil = naca.parse(params.naca)
 
 var dispatcher = new WorkDispatcher('worker-bundle.js')
 
@@ -40,56 +39,51 @@ var config = {
   clustering: 20,
 }
 
-var previousConfig
-function storeConfig () {
-  previousConfig = Object.assign({}, config)
-}
-
 var mesh, eta, xi
 var meshGeometry
 var nOverride
 
-function initializeMesh (cb) {
-  //if (equals(config, previousConfig)) return
+function destroyMesh () {
+  meshGeometry && meshGeometry.destroy()
+  meshGeometry = null
+}
 
-  dispatcher.request('initializeGrid', config).then(function(result) {
-    meshGeometry && meshGeometry.destroy()
+function initializeMesh (cb, force) {
+  dispatcher.request('initializeGrid', {
+    params: config,
+  }, [], force).then(function(result) {
+
+    destroyMesh()
+
     nOverride = 1
     mesh = coerce(result.mesh)
     eta = coerce(result.eta)
 
     meshGeometry = drawMesh(v, mesh, nOverride === undefined ? config.n : nOverride)
     v.dirty = true
-    storeConfig()
 
     cb && cb()
-  }).catch(function (error) {
-    //console.warn(error)
-  })
+  }).catch(function (error) { })
 }
 
-function createMesh (cb) {
-  //if (equals(config, previousConfig)) return
+function createMesh (cb, force) {
   if (!mesh) return
 
-  config.initial = pool.clone(mesh.pick(0))
-  config.eta = eta
-  var n = config.n
-
-  dispatcher.request('createMesh', config /*, [config.initial.data.buffer]*/).then(function(result) {
+  dispatcher.request('createMesh', {
+    params: config,
+    initial: pool.clone(mesh.pick(0)),
+    eta: eta
+  }, [], force).then(function(result) {
     meshGeometry && meshGeometry.destroy()
     nOverride = undefined
 
     mesh = coerce(result.mesh)
 
-    meshGeometry = drawMesh(v, mesh, n)
+    meshGeometry = drawMesh(v, mesh)
     v.dirty = true
-    storeConfig()
 
     cb && cb()
-  }).catch(function (error) {
-    //console.warn(error)
-  })
+  }).catch(function (error) { })
 }
 
 createDatGUI(config, {
@@ -97,19 +91,20 @@ createDatGUI(config, {
     airfoil: {
       change: function () {initializeMesh()},
       finish: function () {
-        initializeMesh()
-        createMesh()
-      },
-    },
-    m: {
-      change: function () {initializeMesh()},
-      finish: function () {
-        initializeMesh()
-        createMesh()
+        console.log('finish!')
+        initializeMesh(null, true)
+        createMesh(null, true)
       },
     },
     mesh: {
-      change: function () {createMesh()}
+      change: function () {
+        console.log('chane!')
+        createMesh()
+      },
+      finish: function () {
+        console.log('finish!')
+        createMesh(null, true)
+      },
     },
   }
 })

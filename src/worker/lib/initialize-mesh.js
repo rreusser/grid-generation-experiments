@@ -13,11 +13,11 @@ function initializeMesh (airfoilData, eta, xy, m, ratio1, ratio2) {
   var airfoil = naca(airfoilData)
 
   var sUpper = function(x) {
-    return arcLength([airfoil.xUpper, airfoil.yUpper], 0, Math.max(1e-15, x), 1e-6, 1, 25)
+    return arcLength([airfoil.xUpper, airfoil.yUpper], 0, Math.max(1e-15, x), 1e-2, 1, 10)
   }
 
   var sLower = function(x) {
-    return arcLength([airfoil.xLower, airfoil.yLower], 0, Math.max(1e-15, x), 1e-6, 1, 25)
+    return arcLength([airfoil.xLower, airfoil.yLower], 0, Math.max(1e-15, x), 1e-2, 1, 10)
   }
 
   var upperLength = sUpper(1)

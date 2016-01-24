@@ -52,8 +52,8 @@ WorkDispatcher.prototype.decTaskCount = function (task) {
   }
 }
 
-WorkDispatcher.prototype.request = function (task, data, transfer) {
-  if (this.getTaskCount(task) > 0) return Promise.reject()
+WorkDispatcher.prototype.request = function (task, data, transfer, force) {
+  if (this.getTaskCount(task) > 0 && !force) return Promise.reject()
   var taskId = guid()
 
   this.incTaskCount(task)
@@ -71,10 +71,6 @@ WorkDispatcher.prototype.request = function (task, data, transfer) {
 
 WorkDispatcher.prototype.start = function (task, data) {
   this.worker.addEventListener('message', function (event) {
-    if (!event.isTrusted) {
-      console.warn('Ignoring untrusted event from origin',event.origin)
-      return
-    }
     var data = event.data
     var handler = this.handlers[data.task]
     this.decTaskCount(data.task)
