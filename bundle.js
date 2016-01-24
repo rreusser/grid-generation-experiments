@@ -2562,10 +2562,25 @@ airfoil.xLower = xLower
 airfoil.yLower = yLower
 airfoil.evaluate = evaluate
 airfoil.parse = parse
+airfoil.isValid = isValid
 
 module.exports = airfoil
 
 var nacaCodePattern = /^([0-9])([0-9])([0-9]{2})$/
+
+function isValid (nacaCode) {
+  if (typeof nacaCode !== 'string') {
+    return false
+  }
+
+  var match = nacaCode.match(nacaCodePattern)
+
+  if (!match) {
+    return false
+  }
+
+  return true
+}
 
 function parse (nacaCode) {
   if (typeof nacaCode !== 'string') {
@@ -41542,7 +41557,7 @@ function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.
 var params
 
 params = extend({
-  naca: '9412',
+  naca: null,
   m: 151,
   n: 50,
 }, queryString.parse(location.search))
@@ -41557,8 +41572,15 @@ var config = {
   n: Number(params.n),
   diffusion: 0.001,
   stepStart: 0.002,
-  stepEnd: 0.1,
+  stepInc: 0.001,
   clustering: 20,
+}
+
+if (naca.isValid(params.naca)) {
+  var airfoil = naca.parse(params.naca)
+  config.thickness = airfoil.t
+  config.camberMag = airfoil.m
+  config.camberLoc = airfoil.p
 }
 
 var mesh, eta, xi
@@ -41613,18 +41635,15 @@ createDatGUI(config, {
     airfoil: {
       change: function () {initializeMesh()},
       finish: function () {
-        console.log('finish!')
         initializeMesh(null, true)
         createMesh(null, true)
       },
     },
     mesh: {
       change: function () {
-        console.log('chane!')
         createMesh()
       },
       finish: function () {
-        console.log('finish!')
         createMesh(null, true)
       },
     },
@@ -41634,8 +41653,8 @@ createDatGUI(config, {
 var v = new Viewport ('canvas', {
   xmin: -0.6,
   xmax: 1.6,
-  ymin: 0.15,
-  ymax: 0.15,
+  ymin: 0.15 - 1,
+  ymax: 0.15 + 1,
   aspectRatio: 1,
   devicePixelRatio: window.devicePixelRatio,
   antialias: false,
@@ -41643,7 +41662,7 @@ var v = new Viewport ('canvas', {
 
 initializeMesh(createMesh)
 
-},{"./lib/config":49,"./lib/draw-mesh":50,"./lib/viewport":51,"./lib/work-dispatcher":52,"naca-four-digit-airfoil":27,"ndarray":40,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],49:[function(require,module,exports){
+},{"./lib/config":49,"./lib/draw-mesh":50,"./lib/viewport":52,"./lib/work-dispatcher":53,"naca-four-digit-airfoil":27,"ndarray":40,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],49:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -41667,7 +41686,7 @@ function createDatGUI (state, config) {
   var nController = meshConfig.add(state, 'n', 3, 300).step(1)
   var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
   var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
-  var stepEndController = meshConfig.add(state, 'stepEnd', 0.0001, 1.0)
+  var stepIncController = meshConfig.add(state, 'stepInc', 0, 0.01)
   var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
   meshConfig.open()
 
@@ -41693,14 +41712,14 @@ function createDatGUI (state, config) {
       nController.onChange(mesh.change)
       diffusionController.onChange(mesh.change)
       stepStartController.onChange(mesh.change)
-      stepEndController.onChange(mesh.change)
+      stepIncController.onChange(mesh.change)
     }
     if (mesh.finish) {
       mController.onFinishChange(mesh.finish)
       nController.onFinishChange(mesh.finish)
       diffusionController.onFinishChange(mesh.finish)
       stepStartController.onFinishChange(mesh.finish)
-      stepEndController.onFinishChange(mesh.finish)
+      stepIncController.onFinishChange(mesh.finish)
     }
   }
 }
@@ -41759,13 +41778,100 @@ module.exports = function drawMesh (v, mesh, n) {
 }
 
 },{"ndarray-show":37,"three":46}],51:[function(require,module,exports){
+/**
+ * @author alteredq / http://alteredqualia.com/
+ * @author mr.doob / http://mrdoob.com/
+ */
+
+var Detector = {
+
+  canvas: !! window.CanvasRenderingContext2D,
+  webgl: ( function () {
+    try {
+      var canvas = document.createElement( 'canvas' );
+
+      return !! (
+        window.WebGLRenderingContext && (
+          canvas.getContext( 'webgl' ) ||
+          canvas.getContext( 'experimental-webgl' )
+        )
+      );
+    } catch ( e ) {
+      return false;
+    }
+
+  })(),
+  workers: !! window.Worker,
+  fileapi: window.File && window.FileReader && window.FileList && window.Blob,
+
+  getWebGLErrorMessage: function () {
+
+    var element = document.createElement( 'div' );
+    element.id = 'webgl-error-message';
+    element.style.fontFamily = 'monospace';
+    element.style.fontSize = '13px';
+    element.style.fontWeight = 'normal';
+    element.style.textAlign = 'center';
+    element.style.background = '#fff';
+    element.style.color = '#000';
+    element.style.padding = '1.5em';
+    element.style.width = '400px';
+    element.style.margin = '5em auto 0';
+
+    if ( ! this.webgl ) {
+
+      element.innerHTML = window.WebGLRenderingContext ? [
+        'Your graphics card does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">WebGL</a>.<br />',
+        'Find out how to get it <a href="http://get.webgl.org/" style="color:#000">here</a>.'
+      ].join( '\n' ) : [
+        'Your browser does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">WebGL</a>.<br/>',
+        'Find out how to get it <a href="http://get.webgl.org/" style="color:#000">here</a>.'
+      ].join( '\n' );
+
+    }
+
+    return element;
+
+  },
+
+  addGetWebGLMessage: function ( parameters ) {
+
+    var parent, id, element;
+
+    parameters = parameters || {};
+
+    parent = parameters.parent !== undefined ? parameters.parent : document.body;
+    id = parameters.id !== undefined ? parameters.id : 'oldie';
+
+    element = Detector.getWebGLErrorMessage();
+    element.id = id;
+
+    parent.appendChild( element );
+
+  }
+
+};
+
+// browserify support
+if ( typeof module === 'object' ) {
+
+  module.exports = Detector;
+
+}
+
+},{}],52:[function(require,module,exports){
 'use strict'
 
+var Detector = require('./threejs-detector.js')
 var three = require('three')
 var extend = require('util-extend')
 var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
+
+//window.THREE = three
+//require('three/examples/js/renderers/Projector')
+//require('three/examples/js/renderers/CanvasRenderer')
 
 module.exports = Viewport
 
@@ -41797,16 +41903,30 @@ function Viewport (id, options) {
     this.render()
   }.bind(this), false)
 
-  this.renderer = new three.WebGLRenderer({
-    antialias: opts.antialias,
-    canvas: this.canvas,
-  })
+  if (Detector.webgl) {
+    this.renderer = new three.WebGLRenderer({
+      antialias: opts.antialias,
+      canvas: this.canvas,
+    })
+  } else {
+    Detector.addGetWebGLMessage()
+    /*this.renderer = new window.THREE.CanvasRenderer({
+      antialias: opts.antialias,
+      canvas: this.canvas,
+    })*/
+    return
+  }
 
   var size = this.getSize()
   this.width = size.width
   this.height = size.height
 
-  this.mouse = {}
+  this.mouse = {
+    x: 0.5 * (opts.xmin + opts.xmax),
+    y: 0.5 * (opts.ymin + opts.ymax),
+    i: this.width / 2,
+    j: this.height / 2,
+  }
 
   this.renderer.setClearColor(new three.Color(0xffffff))
   this.renderer.setPixelRatio(opts.devicePixelRatio)
@@ -41833,6 +41953,7 @@ function Viewport (id, options) {
   render()
 }
 Viewport.prototype.attachMouseChange = function () {
+  var initialized = false
   mouseChange(this.canvas, function(buttons, i, j, mods) {
     this.mouse.i = i
     this.mouse.j = j
@@ -41847,9 +41968,10 @@ Viewport.prototype.attachMouseChange = function () {
     this.mouse.control = mods.control
     this.mouse.meta = mods.meta
 
-    if (buttons === 1) {
+    if (buttons === 1 && initialized) {
       this.pan(dx, dy)
     }
+    initialized = true
   }.bind(this))
 }
 
@@ -41924,6 +42046,8 @@ Viewport.prototype.setBounds = function (xmin, xmax, ymin, ymax) {
 
   this.mouse.x = this.camera.left + this.mouse.i * this.xscale
   this.mouse.y = this.camera.top + this.mouse.j * this.yscale
+
+  this.camera.updateProjectionMatrix()
 }
 
 Viewport.prototype.computeScale = function () {
@@ -41939,11 +42063,9 @@ Viewport.prototype.applyAspectRatio = function () {
   var dy = dx * this.aspectRatio * this.height / this.width
   this.camera.bottom = yc - dy
   this.camera.top = yc + dy
-
-  this.camera.updateProjectionMatrix()
 }
 
-},{"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}],52:[function(require,module,exports){
+},{"./threejs-detector.js":51,"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}],53:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
