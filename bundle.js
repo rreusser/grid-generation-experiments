@@ -41544,9 +41544,8 @@ var params
 params = extend({
   naca: '9412',
   m: 151,
-  n: 100,
+  n: 50,
 }, queryString.parse(location.search))
-//var airfoil = naca.parse(params.naca)
 
 var dispatcher = new WorkDispatcher('worker-bundle.js')
 
@@ -41562,56 +41561,51 @@ var config = {
   clustering: 20,
 }
 
-var previousConfig
-function storeConfig () {
-  previousConfig = Object.assign({}, config)
-}
-
 var mesh, eta, xi
 var meshGeometry
 var nOverride
 
-function initializeMesh (cb) {
-  //if (equals(config, previousConfig)) return
+function destroyMesh () {
+  meshGeometry && meshGeometry.destroy()
+  meshGeometry = null
+}
 
-  dispatcher.request('initializeGrid', config).then(function(result) {
-    meshGeometry && meshGeometry.destroy()
+function initializeMesh (cb, force) {
+  dispatcher.request('initializeGrid', {
+    params: config,
+  }, [], force).then(function(result) {
+
+    destroyMesh()
+
     nOverride = 1
     mesh = coerce(result.mesh)
     eta = coerce(result.eta)
 
     meshGeometry = drawMesh(v, mesh, nOverride === undefined ? config.n : nOverride)
     v.dirty = true
-    storeConfig()
 
     cb && cb()
-  }).catch(function (error) {
-    //console.warn(error)
-  })
+  }).catch(function (error) { })
 }
 
-function createMesh (cb) {
-  //if (equals(config, previousConfig)) return
+function createMesh (cb, force) {
   if (!mesh) return
 
-  config.initial = pool.clone(mesh.pick(0))
-  config.eta = eta
-  var n = config.n
-
-  dispatcher.request('createMesh', config /*, [config.initial.data.buffer]*/).then(function(result) {
+  dispatcher.request('createMesh', {
+    params: config,
+    initial: pool.clone(mesh.pick(0)),
+    eta: eta
+  }, [], force).then(function(result) {
     meshGeometry && meshGeometry.destroy()
     nOverride = undefined
 
     mesh = coerce(result.mesh)
 
-    meshGeometry = drawMesh(v, mesh, n)
+    meshGeometry = drawMesh(v, mesh)
     v.dirty = true
-    storeConfig()
 
     cb && cb()
-  }).catch(function (error) {
-    //console.warn(error)
-  })
+  }).catch(function (error) { })
 }
 
 createDatGUI(config, {
@@ -41619,19 +41613,20 @@ createDatGUI(config, {
     airfoil: {
       change: function () {initializeMesh()},
       finish: function () {
-        initializeMesh()
-        createMesh()
-      },
-    },
-    m: {
-      change: function () {initializeMesh()},
-      finish: function () {
-        initializeMesh()
-        createMesh()
+        console.log('finish!')
+        initializeMesh(null, true)
+        createMesh(null, true)
       },
     },
     mesh: {
-      change: function () {createMesh()}
+      change: function () {
+        console.log('chane!')
+        createMesh()
+      },
+      finish: function () {
+        console.log('finish!')
+        createMesh(null, true)
+      },
     },
   }
 })
@@ -41676,48 +41671,38 @@ function createDatGUI (state, config) {
   var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
   meshConfig.open()
 
-  var airfoilHandlers = config.handlers.airfoil
-  if (airfoilHandlers.change) {
-    thicknessController.onChange(airfoilHandlers.change)
-    camberMagController.onChange(airfoilHandlers.change)
-    camberLocController.onChange(airfoilHandlers.change)
-    clusteringController.onChange(airfoilHandlers.change)
+  var init = config.handlers.airfoil
+  if (init.change) {
+    thicknessController.onChange(init.change)
+    camberMagController.onChange(init.change)
+    camberLocController.onChange(init.change)
+    clusteringController.onChange(init.change)
   }
 
-  if (airfoilHandlers.finish) {
-    thicknessController.onFinishChange(function () {
-      airfoilHandlers.finish()
-    })
-
-    camberMagController.onFinishChange(airfoilHandlers.finish)
-    camberLocController.onFinishChange(airfoilHandlers.finish)
-    clusteringController.onFinishChange(airfoilHandlers.finish)
+  if (init.finish) {
+    thicknessController.onFinishChange(init.finish)
+    camberMagController.onFinishChange(init.finish)
+    camberLocController.onFinishChange(init.finish)
+    clusteringController.onFinishChange(init.finish)
   }
 
-  if (config.handlers.m) {
-    if (config.handlers.m.change) {
-      mController.onChange(config.handlers.m.change)
+  var mesh = config.handlers.mesh
+  if (mesh) {
+    if (mesh.change) {
+      mController.onChange(mesh.change)
+      nController.onChange(mesh.change)
+      diffusionController.onChange(mesh.change)
+      stepStartController.onChange(mesh.change)
+      stepEndController.onChange(mesh.change)
     }
-    if (config.handlers.m.finish) {
-      mController.onFinishChange(config.handlers.m.finish)
-    }
-  }
-
-  if (config.handlers.mesh) {
-    if (config.handlers.mesh.change) {
-      nController.onChange(config.handlers.mesh.change)
-      diffusionController.onChange(config.handlers.mesh.change)
-      stepStartController.onChange(config.handlers.mesh.change)
-      stepEndController.onChange(config.handlers.mesh.change)
-    }
-    if (config.handlers.mesh.finish) {
-      nController.onFinishChange(config.handlers.mesh.finish)
-      diffusionController.onFinishChange(config.handlers.mesh.finish)
-      stepStartController.onFinishChange(config.handlers.mesh.finish)
-      stepEndController.onFinishChange(config.handlers.mesh.finish)
+    if (mesh.finish) {
+      mController.onFinishChange(mesh.finish)
+      nController.onFinishChange(mesh.finish)
+      diffusionController.onFinishChange(mesh.finish)
+      stepStartController.onFinishChange(mesh.finish)
+      stepEndController.onFinishChange(mesh.finish)
     }
   }
-
 }
 
 },{"util-extend":47}],50:[function(require,module,exports){
@@ -42013,8 +41998,8 @@ WorkDispatcher.prototype.decTaskCount = function (task) {
   }
 }
 
-WorkDispatcher.prototype.request = function (task, data, transfer) {
-  if (this.getTaskCount(task) > 0) return Promise.reject()
+WorkDispatcher.prototype.request = function (task, data, transfer, force) {
+  if (this.getTaskCount(task) > 0 && !force) return Promise.reject()
   var taskId = guid()
 
   this.incTaskCount(task)
@@ -42032,10 +42017,6 @@ WorkDispatcher.prototype.request = function (task, data, transfer) {
 
 WorkDispatcher.prototype.start = function (task, data) {
   this.worker.addEventListener('message', function (event) {
-    if (!event.isTrusted) {
-      console.warn('Ignoring untrusted event from origin',event.origin)
-      return
-    }
     var data = event.data
     var handler = this.handlers[data.task]
     this.decTaskCount(data.task)

@@ -1895,6 +1895,341 @@ function bisect(pred, lo, hi, tol) {
 }
 module.exports = bisect
 },{}],7:[function(require,module,exports){
+'use strict';
+
+var d        = require('d')
+  , callable = require('es5-ext/object/valid-callable')
+
+  , apply = Function.prototype.apply, call = Function.prototype.call
+  , create = Object.create, defineProperty = Object.defineProperty
+  , defineProperties = Object.defineProperties
+  , hasOwnProperty = Object.prototype.hasOwnProperty
+  , descriptor = { configurable: true, enumerable: false, writable: true }
+
+  , on, once, off, emit, methods, descriptors, base;
+
+on = function (type, listener) {
+	var data;
+
+	callable(listener);
+
+	if (!hasOwnProperty.call(this, '__ee__')) {
+		data = descriptor.value = create(null);
+		defineProperty(this, '__ee__', descriptor);
+		descriptor.value = null;
+	} else {
+		data = this.__ee__;
+	}
+	if (!data[type]) data[type] = listener;
+	else if (typeof data[type] === 'object') data[type].push(listener);
+	else data[type] = [data[type], listener];
+
+	return this;
+};
+
+once = function (type, listener) {
+	var once, self;
+
+	callable(listener);
+	self = this;
+	on.call(this, type, once = function () {
+		off.call(self, type, once);
+		apply.call(listener, this, arguments);
+	});
+
+	once.__eeOnceListener__ = listener;
+	return this;
+};
+
+off = function (type, listener) {
+	var data, listeners, candidate, i;
+
+	callable(listener);
+
+	if (!hasOwnProperty.call(this, '__ee__')) return this;
+	data = this.__ee__;
+	if (!data[type]) return this;
+	listeners = data[type];
+
+	if (typeof listeners === 'object') {
+		for (i = 0; (candidate = listeners[i]); ++i) {
+			if ((candidate === listener) ||
+					(candidate.__eeOnceListener__ === listener)) {
+				if (listeners.length === 2) data[type] = listeners[i ? 0 : 1];
+				else listeners.splice(i, 1);
+			}
+		}
+	} else {
+		if ((listeners === listener) ||
+				(listeners.__eeOnceListener__ === listener)) {
+			delete data[type];
+		}
+	}
+
+	return this;
+};
+
+emit = function (type) {
+	var i, l, listener, listeners, args;
+
+	if (!hasOwnProperty.call(this, '__ee__')) return;
+	listeners = this.__ee__[type];
+	if (!listeners) return;
+
+	if (typeof listeners === 'object') {
+		l = arguments.length;
+		args = new Array(l - 1);
+		for (i = 1; i < l; ++i) args[i - 1] = arguments[i];
+
+		listeners = listeners.slice();
+		for (i = 0; (listener = listeners[i]); ++i) {
+			apply.call(listener, this, args);
+		}
+	} else {
+		switch (arguments.length) {
+		case 1:
+			call.call(listeners, this);
+			break;
+		case 2:
+			call.call(listeners, this, arguments[1]);
+			break;
+		case 3:
+			call.call(listeners, this, arguments[1], arguments[2]);
+			break;
+		default:
+			l = arguments.length;
+			args = new Array(l - 1);
+			for (i = 1; i < l; ++i) {
+				args[i - 1] = arguments[i];
+			}
+			apply.call(listeners, this, args);
+		}
+	}
+};
+
+methods = {
+	on: on,
+	once: once,
+	off: off,
+	emit: emit
+};
+
+descriptors = {
+	on: d(on),
+	once: d(once),
+	off: d(off),
+	emit: d(emit)
+};
+
+base = defineProperties({}, descriptors);
+
+module.exports = exports = function (o) {
+	return (o == null) ? create(base) : defineProperties(Object(o), descriptors);
+};
+exports.methods = methods;
+
+},{"d":8,"es5-ext/object/valid-callable":17}],8:[function(require,module,exports){
+'use strict';
+
+var assign        = require('es5-ext/object/assign')
+  , normalizeOpts = require('es5-ext/object/normalize-options')
+  , isCallable    = require('es5-ext/object/is-callable')
+  , contains      = require('es5-ext/string/#/contains')
+
+  , d;
+
+d = module.exports = function (dscr, value/*, options*/) {
+	var c, e, w, options, desc;
+	if ((arguments.length < 2) || (typeof dscr !== 'string')) {
+		options = value;
+		value = dscr;
+		dscr = null;
+	} else {
+		options = arguments[2];
+	}
+	if (dscr == null) {
+		c = w = true;
+		e = false;
+	} else {
+		c = contains.call(dscr, 'c');
+		e = contains.call(dscr, 'e');
+		w = contains.call(dscr, 'w');
+	}
+
+	desc = { value: value, configurable: c, enumerable: e, writable: w };
+	return !options ? desc : assign(normalizeOpts(options), desc);
+};
+
+d.gs = function (dscr, get, set/*, options*/) {
+	var c, e, options, desc;
+	if (typeof dscr !== 'string') {
+		options = set;
+		set = get;
+		get = dscr;
+		dscr = null;
+	} else {
+		options = arguments[3];
+	}
+	if (get == null) {
+		get = undefined;
+	} else if (!isCallable(get)) {
+		options = get;
+		get = set = undefined;
+	} else if (set == null) {
+		set = undefined;
+	} else if (!isCallable(set)) {
+		options = set;
+		set = undefined;
+	}
+	if (dscr == null) {
+		c = true;
+		e = false;
+	} else {
+		c = contains.call(dscr, 'c');
+		e = contains.call(dscr, 'e');
+	}
+
+	desc = { get: get, set: set, configurable: c, enumerable: e };
+	return !options ? desc : assign(normalizeOpts(options), desc);
+};
+
+},{"es5-ext/object/assign":9,"es5-ext/object/is-callable":12,"es5-ext/object/normalize-options":16,"es5-ext/string/#/contains":19}],9:[function(require,module,exports){
+'use strict';
+
+module.exports = require('./is-implemented')()
+	? Object.assign
+	: require('./shim');
+
+},{"./is-implemented":10,"./shim":11}],10:[function(require,module,exports){
+'use strict';
+
+module.exports = function () {
+	var assign = Object.assign, obj;
+	if (typeof assign !== 'function') return false;
+	obj = { foo: 'raz' };
+	assign(obj, { bar: 'dwa' }, { trzy: 'trzy' });
+	return (obj.foo + obj.bar + obj.trzy) === 'razdwatrzy';
+};
+
+},{}],11:[function(require,module,exports){
+'use strict';
+
+var keys  = require('../keys')
+  , value = require('../valid-value')
+
+  , max = Math.max;
+
+module.exports = function (dest, src/*, …srcn*/) {
+	var error, i, l = max(arguments.length, 2), assign;
+	dest = Object(value(dest));
+	assign = function (key) {
+		try { dest[key] = src[key]; } catch (e) {
+			if (!error) error = e;
+		}
+	};
+	for (i = 1; i < l; ++i) {
+		src = arguments[i];
+		keys(src).forEach(assign);
+	}
+	if (error !== undefined) throw error;
+	return dest;
+};
+
+},{"../keys":13,"../valid-value":18}],12:[function(require,module,exports){
+// Deprecated
+
+'use strict';
+
+module.exports = function (obj) { return typeof obj === 'function'; };
+
+},{}],13:[function(require,module,exports){
+'use strict';
+
+module.exports = require('./is-implemented')()
+	? Object.keys
+	: require('./shim');
+
+},{"./is-implemented":14,"./shim":15}],14:[function(require,module,exports){
+'use strict';
+
+module.exports = function () {
+	try {
+		Object.keys('primitive');
+		return true;
+	} catch (e) { return false; }
+};
+
+},{}],15:[function(require,module,exports){
+'use strict';
+
+var keys = Object.keys;
+
+module.exports = function (object) {
+	return keys(object == null ? object : Object(object));
+};
+
+},{}],16:[function(require,module,exports){
+'use strict';
+
+var forEach = Array.prototype.forEach, create = Object.create;
+
+var process = function (src, obj) {
+	var key;
+	for (key in src) obj[key] = src[key];
+};
+
+module.exports = function (options/*, …options*/) {
+	var result = create(null);
+	forEach.call(arguments, function (options) {
+		if (options == null) return;
+		process(Object(options), result);
+	});
+	return result;
+};
+
+},{}],17:[function(require,module,exports){
+'use strict';
+
+module.exports = function (fn) {
+	if (typeof fn !== 'function') throw new TypeError(fn + " is not a function");
+	return fn;
+};
+
+},{}],18:[function(require,module,exports){
+'use strict';
+
+module.exports = function (value) {
+	if (value == null) throw new TypeError("Cannot use null or undefined");
+	return value;
+};
+
+},{}],19:[function(require,module,exports){
+'use strict';
+
+module.exports = require('./is-implemented')()
+	? String.prototype.contains
+	: require('./shim');
+
+},{"./is-implemented":20,"./shim":21}],20:[function(require,module,exports){
+'use strict';
+
+var str = 'razdwatrzy';
+
+module.exports = function () {
+	if (typeof str.contains !== 'function') return false;
+	return ((str.contains('dwa') === true) && (str.contains('foo') === false));
+};
+
+},{}],21:[function(require,module,exports){
+'use strict';
+
+var indexOf = String.prototype.indexOf;
+
+module.exports = function (searchString/*, position*/) {
+	return indexOf.call(this, searchString, arguments[1]) > -1;
+};
+
+},{}],22:[function(require,module,exports){
 'use strict'
 
 module.exports = computeCoefficients
@@ -1953,7 +2288,7 @@ function computeCoefficients (deriv, points, ni, A, P) {
 }
 
 
-},{"ndarray":39,"ndarray-lup-factorization":8,"ndarray-lup-solve":11,"ndarray-scratch":35}],8:[function(require,module,exports){
+},{"ndarray":54,"ndarray-lup-factorization":23,"ndarray-lup-solve":26,"ndarray-scratch":50}],23:[function(require,module,exports){
 'use strict'
 
 var blas = require('ndarray-blas-level1'),
@@ -2064,7 +2399,7 @@ function lupWithoutSwap ( A, L, U, P ) {
   return true;
 }*/
 
-},{"ndarray-blas-level1":9,"ndarray-diagonal":10,"ndarray-ops":21}],9:[function(require,module,exports){
+},{"ndarray-blas-level1":24,"ndarray-diagonal":25,"ndarray-ops":36}],24:[function(require,module,exports){
 'use strict';
 
 module.exports.swap = function(x, y) {
@@ -2189,7 +2524,7 @@ module.exports.iamax = function(x) {
   return imax
 }
 
-},{}],10:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict'
 
 var ndarray = require('ndarray')
@@ -2211,7 +2546,7 @@ function pickDiagonal(M) {
   }
   return ndarray(M.data, [nshape], [nstride], M.offset)
 }
-},{"ndarray":39}],11:[function(require,module,exports){
+},{"ndarray":54}],26:[function(require,module,exports){
 'use strict'
 
 var blas = require('ndarray-blas-level1'),
@@ -2284,9 +2619,9 @@ function solve( L, U, P, x, work ) {
 
 module.exports = solve
 
-},{"ndarray-blas-level1":12,"ndarray-scratch":35}],12:[function(require,module,exports){
-arguments[4][9][0].apply(exports,arguments)
-},{"dup":9}],13:[function(require,module,exports){
+},{"ndarray-blas-level1":27,"ndarray-scratch":50}],27:[function(require,module,exports){
+arguments[4][24][0].apply(exports,arguments)
+},{"dup":24}],28:[function(require,module,exports){
 'use strict'
 
 airfoil.thickness = thickness
@@ -2452,7 +2787,7 @@ function evaluate (x, c, m, p, t) {
   ]
 }
 
-},{}],14:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict"
 
 
@@ -2464,9 +2799,9 @@ module.exports = function(array, f) {
   return array
 }
 
-},{"cwise/lib/wrapper":15}],15:[function(require,module,exports){
+},{"cwise/lib/wrapper":30}],30:[function(require,module,exports){
 module.exports = require("cwise-compiler")
-},{"cwise-compiler":16}],16:[function(require,module,exports){
+},{"cwise-compiler":31}],31:[function(require,module,exports){
 "use strict"
 
 var createThunk = require("./lib/thunk.js")
@@ -2577,7 +2912,7 @@ function compileCwise(user_args) {
 
 module.exports = compileCwise
 
-},{"./lib/thunk.js":18}],17:[function(require,module,exports){
+},{"./lib/thunk.js":33}],32:[function(require,module,exports){
 "use strict"
 
 var uniq = require("uniq")
@@ -2933,7 +3268,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":19}],18:[function(require,module,exports){
+},{"uniq":34}],33:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -3021,7 +3356,7 @@ function createThunk(proc) {
 
 module.exports = createThunk
 
-},{"./compile.js":17}],19:[function(require,module,exports){
+},{"./compile.js":32}],34:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -3080,7 +3415,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],20:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict'
 
 var pool = require('ndarray-scratch')
@@ -3126,7 +3461,7 @@ function linspace () {
   return output
 }
 
-},{"ndarray-fill":14,"ndarray-scratch":35,"util-extend":45}],21:[function(require,module,exports){
+},{"ndarray-fill":29,"ndarray-scratch":50,"util-extend":61}],36:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -3589,15 +3924,15 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":22}],22:[function(require,module,exports){
-arguments[4][16][0].apply(exports,arguments)
-},{"./lib/thunk.js":24,"dup":16}],23:[function(require,module,exports){
-arguments[4][17][0].apply(exports,arguments)
-},{"dup":17,"uniq":25}],24:[function(require,module,exports){
-arguments[4][18][0].apply(exports,arguments)
-},{"./compile.js":23,"dup":18}],25:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],26:[function(require,module,exports){
+},{"cwise-compiler":37}],37:[function(require,module,exports){
+arguments[4][31][0].apply(exports,arguments)
+},{"./lib/thunk.js":39,"dup":31}],38:[function(require,module,exports){
+arguments[4][32][0].apply(exports,arguments)
+},{"dup":32,"uniq":40}],39:[function(require,module,exports){
+arguments[4][33][0].apply(exports,arguments)
+},{"./compile.js":38,"dup":33}],40:[function(require,module,exports){
+arguments[4][34][0].apply(exports,arguments)
+},{"dup":34}],41:[function(require,module,exports){
 "use strict"
 
 var SHAPE   = "n"
@@ -3723,17 +4058,17 @@ function computePrefixSum(array) {
   proc(array)
   return array
 }
-},{}],27:[function(require,module,exports){
-arguments[4][21][0].apply(exports,arguments)
-},{"cwise-compiler":28,"dup":21}],28:[function(require,module,exports){
-arguments[4][16][0].apply(exports,arguments)
-},{"./lib/thunk.js":30,"dup":16}],29:[function(require,module,exports){
-arguments[4][17][0].apply(exports,arguments)
-},{"dup":17,"uniq":31}],30:[function(require,module,exports){
-arguments[4][18][0].apply(exports,arguments)
-},{"./compile.js":29,"dup":18}],31:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],32:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
+arguments[4][36][0].apply(exports,arguments)
+},{"cwise-compiler":43,"dup":36}],43:[function(require,module,exports){
+arguments[4][31][0].apply(exports,arguments)
+},{"./lib/thunk.js":45,"dup":31}],44:[function(require,module,exports){
+arguments[4][32][0].apply(exports,arguments)
+},{"dup":32,"uniq":46}],45:[function(require,module,exports){
+arguments[4][33][0].apply(exports,arguments)
+},{"./compile.js":44,"dup":33}],46:[function(require,module,exports){
+arguments[4][34][0].apply(exports,arguments)
+},{"dup":34}],47:[function(require,module,exports){
 /**
  * Bit twiddling hacks for JavaScript.
  *
@@ -3939,7 +4274,7 @@ exports.nextCombination = function(v) {
 }
 
 
-},{}],33:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 "use strict"
 
 function dupe_array(count, value, i) {
@@ -3989,7 +4324,7 @@ function dupe(count, value) {
 }
 
 module.exports = dupe
-},{}],34:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global,Buffer){
 'use strict'
 
@@ -4206,7 +4541,7 @@ exports.clearCache = function clearCache() {
   }
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"bit-twiddle":32,"buffer":1,"dup":33}],35:[function(require,module,exports){
+},{"bit-twiddle":47,"buffer":1,"dup":48}],50:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -4314,7 +4649,7 @@ function eye(shape, dtype) {
 }
 exports.eye = eye
 
-},{"ndarray":39,"ndarray-ops":27,"typedarray-pool":34}],36:[function(require,module,exports){
+},{"ndarray":54,"ndarray-ops":42,"typedarray-pool":49}],51:[function(require,module,exports){
 var showf = require('fixed-width-float');
 var ndarray = require('ndarray');
 
@@ -4370,7 +4705,7 @@ function d4 (m, opts) {
     return rows.join('\n' + Array(len+1).join('-') + '\n\n');
 }
 
-},{"fixed-width-float":37,"ndarray":39}],37:[function(require,module,exports){
+},{"fixed-width-float":52,"ndarray":54}],52:[function(require,module,exports){
 var sprintf = require('sprintf');
 module.exports = format;
 
@@ -4457,7 +4792,7 @@ function packf (x, bytes) {
     return pad(s, bytes).slice(0, bytes);
 }
 
-},{"sprintf":38}],38:[function(require,module,exports){
+},{"sprintf":53}],53:[function(require,module,exports){
 /**
 sprintf() for JavaScript 0.7-beta1
 http://www.diveintojavascript.com/projects/javascript-sprintf
@@ -4708,7 +5043,7 @@ module.exports = sprintf;
 sprintf.sprintf = sprintf;
 sprintf.vsprintf = vsprintf;
 
-},{}],39:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -5053,7 +5388,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":40,"is-buffer":41}],40:[function(require,module,exports){
+},{"iota-array":55,"is-buffer":56}],55:[function(require,module,exports){
 "use strict"
 
 function iota(n) {
@@ -5065,7 +5400,7 @@ function iota(n) {
 }
 
 module.exports = iota
-},{}],41:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 /**
  * Determine if an object is Buffer
  *
@@ -5084,7 +5419,7 @@ module.exports = function (obj) {
     ))
 }
 
-},{}],42:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict'
 
 module.exports = IntegratorFactory
@@ -5126,7 +5461,7 @@ function IntegratorFactory( y0, deriv, t, dt ) {
 }
 
 
-},{}],43:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict'
 
 module.exports = IntegratorFactory
@@ -5193,7 +5528,7 @@ function IntegratorFactory( y0, deriv, t, dt ) {
 }
 
 
-},{}],44:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 'use strict'
 
 module.exports = IntegratorFactory
@@ -5483,7 +5818,83 @@ function IntegratorFactory( y0, deriv, t, dt, options ) {
 }
 
 
-},{}],45:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
+module.exports = shallow
+
+function shallow(a, b, compare) {
+  var aIsArray = Array.isArray(a)
+  var bIsArray = Array.isArray(b)
+
+  if (aIsArray !== bIsArray) return false
+
+  var aTypeof = typeof a
+  var bTypeof = typeof b
+
+  if (aTypeof !== bTypeof) return false
+  if (flat(aTypeof)) return compare
+    ? compare(a, b)
+    : a === b
+
+  return aIsArray
+    ? shallowArray(a, b, compare)
+    : shallowObject(a, b, compare)
+}
+
+function shallowArray(a, b, compare) {
+  var l = a.length
+  if (l !== b.length) return false
+
+  if (compare) {
+    for (var i = 0; i < l; i++)
+      if (!compare(a[i], b[i])) return false
+  } else {
+    for (var i = 0; i < l; i++) {
+      if (a[i] !== b[i]) return false
+    }
+  }
+
+  return true
+}
+
+function shallowObject(a, b, compare) {
+  var ka = 0
+  var kb = 0
+
+  if (compare) {
+    for (var key in a) {
+      if (
+        a.hasOwnProperty(key) &&
+        !compare(a[key], b[key])
+      ) return false
+
+      ka++
+    }
+  } else {
+    for (var key in a) {
+      if (
+        a.hasOwnProperty(key) &&
+        a[key] !== b[key]
+      ) return false
+
+      ka++
+    }
+  }
+
+  for (var key in b) {
+    if (b.hasOwnProperty(key)) kb++
+  }
+
+  return ka === kb
+}
+
+function flat(type) {
+  return (
+    type !== 'function' &&
+    type !== 'object'
+  )
+}
+
+},{}],61:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5518,72 +5929,47 @@ function extend(origin, add) {
   return origin;
 }
 
-},{}],46:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 'use strict'
 
 var EventLoop = require('./lib/event-loop')
-var ndarray = require('ndarray')
-var prefixSum = require('ndarray-prefix-sum')
-var initializeMesh = require('./lib/initialize-mesh')
-var linspace = require('ndarray-linspace')
-var ops = require('ndarray-ops')
-var Mesher = require('./lib/mesher')
-var show = require('ndarray-show')
+var WorkerState = require('./lib/worker-state')
 
-function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.offset)}
-
-var mesher
+var w = new WorkerState()
 
 var eventLoop = new EventLoop({
   handlers: {
     initializeGrid: function (data, cb) {
-      //console.log('Initializing NACA airfoil', data)
-
-      var airfoil = data.airfoil
-      var m = data.m
-      var n = data.n
-
-      var mesh = ndarray(new Float32Array(n * m * 3), [n, m, 3])
-      var eta = ndarray(new Float32Array(m + 1), [m + 1])
-
-      initializeMesh({
-        t: data.thickness,
-        m: data.camberMag,
-        p: data.camberLoc,
-      }, eta, mesh.pick(0), m, data.clustering, data.clustering)
-
+      w.setState(data.params)
+      if (w.needsInitialization) {
+        w.initialize()
+      }
       cb({
-        mesh: mesh,
-        eta: eta,
-      })//, [mesh.data.buffer, eta.data.buffer])
+        mesh: w.mesh,
+        eta: w.eta,
+      })
     },
     createMesh: function (data, cb) {
-      var airfoil = data.airfoil
-      var m = data.m
-      var n = data.n
+      w.setState(data.params)
 
-      var mesh = ndarray(new Float32Array(n * m * 3), [n, m, 3])
-      ops.assign(mesh.pick(0), coerce(data.initial))
-      var eta = coerce(data.eta)
+      if (w.needsInitialization) {
+        w.initialize()
+      }
 
-      var xi = ndarray(new Float32Array(n), [n])
-
-      ops.assign(xi.lo(1), linspace(data.stepStart, data.stepEnd, n - 1))
-      prefixSum(xi)
-
-      mesher = new Mesher(eta, xi, mesh, data.diffusion)
-
-      mesher.march()
+      w.createMesh(data)
 
       cb({
-        mesh: mesher.mesh
+        mesh: w.mesh,
+        eta: w.eta,
+        xi: w.xi,
+        n: w.state.n,
+        m: w.state.m,
       })
-
     },
   }
 })
 
-},{"./lib/event-loop":49,"./lib/initialize-mesh":52,"./lib/mesher":53,"ndarray":39,"ndarray-linspace":20,"ndarray-ops":21,"ndarray-prefix-sum":26,"ndarray-show":36}],47:[function(require,module,exports){
+},{"./lib/event-loop":65,"./lib/worker-state":73}],63:[function(require,module,exports){
 'use strict'
 
 var stencil = require('finite-difference-stencil')
@@ -5627,7 +6013,7 @@ function computePeriodicDerivativeCoefficients (num, n, t, betaL, alpha, betaR, 
 }
 
 
-},{"finite-difference-stencil":7}],48:[function(require,module,exports){
+},{"finite-difference-stencil":22}],64:[function(require,module,exports){
 'use strict'
 
 var coeffs = require('./compute-periodic-derivative-coefficients')
@@ -5695,7 +6081,7 @@ Derivative.prototype.compute = function (xp, yp, x, ox, y, oy) {
   triper(n, this.betaL, this.alpha, this.betaR, xp, yp, this.w)
 }
 
-},{"./compute-periodic-derivative-coefficients":47,"./solve-periodic-tridiagonal":54}],49:[function(require,module,exports){
+},{"./compute-periodic-derivative-coefficients":63,"./solve-periodic-tridiagonal":72}],65:[function(require,module,exports){
 'use strict'
 
 module.exports = EventLoop
@@ -5736,7 +6122,7 @@ EventLoop.prototype.start = function () {
   }.bind(this))
 }
 
-},{"util-extend":45}],50:[function(require,module,exports){
+},{"util-extend":61}],66:[function(require,module,exports){
 'use strict'
 
 module.exports = hyperbolicGridDerivative
@@ -5744,21 +6130,21 @@ module.exports = hyperbolicGridDerivative
 function hyperbolicGridDerivative (yp, y) {
   var i, dx, dy
 
-  this.ddeta.compute(this.dxdeta, this.dydeta, y, 0, y, this.n)
-  this.d2deta2.compute(this.d2xdeta2, this.d2ydeta2, y, 0, y, this.n)
+  this.ddeta.compute(this.dxdeta, this.dydeta, y, 0, y, this.m)
+  this.d2deta2.compute(this.d2xdeta2, this.d2ydeta2, y, 0, y, this.m)
 
-  for (i = 0; i < this.n; i++) {
+  for (i = 0; i < this.m; i++) {
     dx = this.dxdeta[i]
     dy = this.dydeta[i]
     var ds2 = dx * dx + dy * dy
     var coeff =  - 1 / ds2
     yp[i         ] = - coeff * dy + this.d2xdeta2[i] * this.diffusion
-    yp[i + this.n] =   coeff * dx + this.d2ydeta2[i] * this.diffusion
+    yp[i + this.m] =   coeff * dx + this.d2ydeta2[i] * this.diffusion
   }
 
 }
 
-},{}],51:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 'use strict'
 
 var ops = require('ndarray-ops')
@@ -5796,7 +6182,7 @@ function incdec (out, t1, t2, n, r1, r2) {
   return out
 }
 
-},{"ndarray-ops":21,"ndarray-show":36}],52:[function(require,module,exports){
+},{"ndarray-ops":36,"ndarray-show":51}],68:[function(require,module,exports){
 'use strict'
 
 var arcLength = require('arc-length')
@@ -5812,11 +6198,11 @@ function initializeMesh (airfoilData, eta, xy, m, ratio1, ratio2) {
   var airfoil = naca(airfoilData)
 
   var sUpper = function(x) {
-    return arcLength([airfoil.xUpper, airfoil.yUpper], 0, Math.max(1e-15, x), 1e-6, 1, 25)
+    return arcLength([airfoil.xUpper, airfoil.yUpper], 0, Math.max(1e-15, x), 1e-2, 1, 10)
   }
 
   var sLower = function(x) {
-    return arcLength([airfoil.xLower, airfoil.yLower], 0, Math.max(1e-15, x), 1e-6, 1, 25)
+    return arcLength([airfoil.xLower, airfoil.yLower], 0, Math.max(1e-15, x), 1e-2, 1, 10)
   }
 
   var upperLength = sUpper(1)
@@ -5863,7 +6249,7 @@ function initializeMesh (airfoilData, eta, xy, m, ratio1, ratio2) {
 }
 
 
-},{"./incdec":51,"arc-length":5,"bisect":6,"naca-four-digit-airfoil":13}],53:[function(require,module,exports){
+},{"./incdec":67,"arc-length":5,"bisect":6,"naca-four-digit-airfoil":28}],69:[function(require,module,exports){
 'use strict'
 
 var ode4 = require('ode-rk4')
@@ -5878,33 +6264,24 @@ function Mesher (eta, xi, mesh, diffusion) {
   var x0, y0, x1, y1, dxdeta, dydeta, d2xdeta2, d2ydeta2, dx, dy, f
   this.mesh = mesh
   this.xi = xi
-  this.n = this.mesh.shape[1]
-  this.m = this.xi.shape[0]
+  this.m = this.mesh.shape[1]
+  this.n = this.xi.shape[0]
 
-  var ddeta = new Derivative(1, this.n, eta.data)
-  var d2deta2 = new Derivative(2, this.n, eta.data)
+  this.ddeta = new Derivative(1, this.m, eta.data)
+  this.d2deta2 = new Derivative(2, this.m, eta.data)
 
-  this.f = new Float64Array(this.n * 2)
+  this.f = new Float64Array(this.m * 2)
   this.diffusion = diffusion
 
   // Work arrays
-  dxdeta = new Float64Array(this.n)
-  dydeta = new Float64Array(this.n)
-  d2xdeta2 = new Float64Array(this.n)
-  d2ydeta2 = new Float64Array(this.n)
+  this.dxdeta = new Float64Array(this.m)
+  this.dydeta = new Float64Array(this.m)
+  this.d2xdeta2 = new Float64Array(this.m)
+  this.d2ydeta2 = new Float64Array(this.m)
 
-  var deriv = hyperbolicGridDerivative.bind({
-    ddeta: ddeta,
-    d2deta2: d2deta2,
-    dxdeta: dxdeta,
-    dydeta: dydeta,
-    d2xdeta2: d2xdeta2,
-    d2ydeta2: d2ydeta2,
-    n: this.n,
-    diffusion: diffusion,
-  })
+  this.deriv = hyperbolicGridDerivative.bind(this)
 
-  this.integrator = ode4(this.f, deriv, 0, 0.1)
+  this.integrator = ode4(this.f, this.deriv, 0, 0.1)
   //integrator.dtMinMag = 0.001
   //integrator.dtMaxMag = 0.1
   //integrator.tol = 1e-2
@@ -5915,16 +6292,15 @@ Mesher.prototype.march = function () {
   var i, j
   var divs = 20
 
-  for (i = 0; i < this.n; i++) {
+  for (i = 0; i < this.m; i++) {
     this.f[i] = this.mesh.get(0, i, 0)
-    this.f[i + this.n] = this.mesh.get(0, i, 1)
+    this.f[i + this.m] = this.mesh.get(0, i, 1)
   }
 
-  for (i = 1; i < this.m; i++) {
-
+  for (i = 1; i < this.n; i++) {
     var c1 = 1
     var c2 = this.diffusion
-    var dx = 1 / this.n
+    var dx = 1 / this.m
 
     var dt1 = dx / c1 * 0.1
     var dt2 = Math.sqrt(dx / c2) * 0.002
@@ -5932,19 +6308,73 @@ Mesher.prototype.march = function () {
     var dxi = this.xi.get(i) - this.xi.get(i - 1)
 
     var divs = Math.floor(Math.max(dxi / dt1, dxi / dt2))
-    //console.log(divs)
 
     this.integrator.dt = dxi / divs
     this.integrator.steps(divs)
 
-    for (j = 0; j < this.n; j++) {
+    for (j = 0; j < this.m; j++) {
       this.mesh.set(i, j, 0, this.f[j])
-      this.mesh.set(i, j, 1, this.f[j + this.n])
+      this.mesh.set(i, j, 1, this.f[j + this.m])
     }
   }
 }
 
-},{"./derivative":48,"./hyperbolic-grid-derivative":50,"ode-euler":42,"ode-rk4":43,"ode45-cash-karp":44}],54:[function(require,module,exports){
+},{"./derivative":64,"./hyperbolic-grid-derivative":66,"ode-euler":57,"ode-rk4":58,"ode45-cash-karp":59}],70:[function(require,module,exports){
+'use strict'
+
+var ndarray = require('ndarray')
+
+module.exports = coerce
+
+function coerce (data) {
+  return ndarray(
+    data.data,
+    data.shape,
+    data.stride,
+    data.offset
+  )
+}
+
+},{"ndarray":54}],71:[function(require,module,exports){
+'use strict'
+
+module.exports = WorkerState
+
+var shallowEquals = require('shallow-equals')
+var EventEmitter = require('event-emitter')
+
+function shallowDiff (a, b) {
+  var diffs = {}
+  for (var key in b) {
+    if (b.hasOwnProperty(key) && a[key] !== b[key]) {
+      diffs[key] = [a[key], b[key]]
+    }
+  }
+  for (var key in a) {
+    if (a.hasOwnProperty(key) && a[key] !== b[key]) {
+      diffs[key] = [a[key], b[key]]
+    }
+  }
+  return diffs
+}
+
+function WorkerState (initialState) {
+  EventEmitter(this)
+
+  this.state = Object.assign({}, initialState)
+}
+
+WorkerState.prototype.setState = function (newState) {
+  var diffs = shallowDiff(newState, this.state)
+  Object.assign(this.state, newState)
+  if (Object.keys(diffs).length > 0) {
+    this.emit('change', diffs)
+  }
+}
+
+
+
+},{"event-emitter":7,"shallow-equals":60}],72:[function(require,module,exports){
 'use strict'
 
 module.exports = solvePeriodicTridiagonal
@@ -6017,4 +6447,80 @@ function solvePeriodicTridiagonal (n, a, b, c, x, y, w) {
   return true
 }
 
-},{}]},{},[46]);
+},{}],73:[function(require,module,exports){
+'use strict'
+
+var ndarray = require('ndarray')
+
+var show = require('ndarray-show')
+var initializeMesh = require('./initialize-mesh')
+var ShallowState = require('./shallow-state')
+var ops = require('ndarray-ops')
+var Mesher = require('./mesher')
+var coerce = require('./ndarray-coerce')
+var linspace = require('ndarray-linspace')
+var prefixSum = require('ndarray-prefix-sum')
+var ndarray = require('ndarray')
+
+module.exports = WorkerState
+
+function WorkerState () {
+  ShallowState.call(this)
+
+  this.on('change', function(changes) {
+    if (changes.m ||
+        changes.n ||
+        changes.thickness ||
+        changes.camberMag ||
+        changes.camberLoc ||
+        changes.clustering) {
+
+      this.needsInitialization = true
+    }
+    if (changes.m ||
+        changes.n ||
+        changes.diffusion ||
+        changes.stepStart ||
+        changes.stepEnd ||
+        changes.clustering) {
+      this.needsMesh = true
+
+    }
+  }.bind(this))
+}
+
+WorkerState.prototype = Object.create(ShallowState.prototype)
+
+WorkerState.prototype.initialize = function () {
+  var m = this.state.m
+  var n = this.state.n
+  this.mesh = ndarray(new Float32Array(m * n * 3), [n, m, 3])
+  this.eta = ndarray(new Float32Array(m + 1), [m + 1])
+
+  initializeMesh({
+    t: this.state.thickness,
+    m: this.state.camberMag,
+    p: this.state.camberLoc,
+  }, this.eta, this.mesh.pick(0), m, this.state.clustering, this.state.clustering)
+
+  this.xi = ndarray(new Float32Array(n), [n])
+
+  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion)
+
+  this.needsInitialization = false
+}
+
+WorkerState.prototype.createMesh = function (data) {
+  var m = this.state.m
+  var n = this.xi.shape[0]
+
+  linspace(this.xi.lo(1), this.state.stepStart, this.state.stepEnd, n - 1)
+  prefixSum(this.xi)
+
+  this.mesher.diffusion = this.state.diffusion
+  this.mesher.march()
+
+  this.needsMesh = false
+}
+
+},{"./initialize-mesh":68,"./mesher":69,"./ndarray-coerce":70,"./shallow-state":71,"ndarray":54,"ndarray-linspace":35,"ndarray-ops":36,"ndarray-prefix-sum":41,"ndarray-show":51}]},{},[62]);
