@@ -11,39 +11,30 @@ var Viewport = require('./lib/viewport')
 var naca = require('naca-four-digit-airfoil')
 var createDatGUI = require('./lib/config')
 var drawMesh = require('./lib/draw-mesh')
+var drawPoints = require('./lib/draw-points')
 var equals = require('shallow-equals')
+var coerce = require('../lib/ndarray-coerce')
+var defaults = require('./lib/defaults')
 
-window.ndarray = require('ndarray')
+var params = extend(defaults, queryString.parse(location.search))
 
-function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.offset)}
+var numericalParams = [
+  'thickness', 'camberMag', 'camberLoc', 'm', 'n',
+  'diffusion', 'stepStart', 'stepInc', 'clustering',
+  'xmin', 'xmax', 'ymin', 'ymax'
+]
 
-var params
+var config = {}
+for (var i = 0; i < numericalParams.length; i++) {
+  var param = numericalParams[i]
+  config[param] = Number(params[param])
+}
 
-params = extend({
-  naca: null,
-  m: 151,
-  n: 50,
-  thickness: 0.12,
-  camberMag: 0.05,
-  camberLoc: 0.4,
-  stepInc: 0.001,
-  stepStart: 0.002,
-  diffusion: 0.001,
-  clustering: 20,
-}, queryString.parse(location.search))
+var booleanParams = ['points']
 
-var dispatcher = new WorkDispatcher('worker-bundle.js')
-
-var config = {
-  thickness: Number(params.thickness),
-  camberMag: Number(params.camberMag),
-  camberLoc: Number(params.camberLoc),
-  m: Number(params.m),
-  n: Number(params.n),
-  diffusion: Number(params.diffusion),
-  stepStart: Number(params.stepStart),
-  stepInc: Number(params.stepInc),
-  clustering: Number(params.clustering),
+for (var i = 0; i < booleanParams.length; i++) {
+  var param = booleanParams[i]
+  config[param] = params[param] !== 'false'
 }
 
 if (naca.isValid(params.naca)) {
@@ -55,29 +46,40 @@ if (naca.isValid(params.naca)) {
 
 var mesh, eta, xi
 var meshGeometry
+var pointGeometry
 var nOverride
 
-function destroyMesh () {
+function destroyGeometry () {
   meshGeometry && meshGeometry.destroy()
   meshGeometry = null
+
+  pointGeometry && pointGeometry.destroy()
+  pointGeometry = null
 }
+
+var dispatcher = new WorkDispatcher('worker-bundle.js')
 
 function initializeMesh (cb, force) {
   dispatcher.request('initializeGrid', {
     params: config,
   }, [], force).then(function(result) {
 
-    destroyMesh()
-
-    nOverride = 1
+    //nOverride = 1
     mesh = coerce(result.mesh)
     eta = coerce(result.eta)
 
-    meshGeometry = drawMesh(v, mesh, nOverride === undefined ? config.n : nOverride)
-    v.dirty = true
+    if (false) {
+      destroyGeometry()
+      meshGeometry = drawMesh(v, mesh, nOverride === undefined ? config.n : nOverride)
+      if (config.points) pointGeometry = drawPoints(v, mesh, 1)
+
+      v.dirty = true
+    }
 
     cb && cb()
-  }).catch(function (error) { })
+  }).catch(function (error) {
+    //console.log(error)
+  })
 }
 
 function createMesh (cb, force) {
@@ -88,25 +90,43 @@ function createMesh (cb, force) {
     initial: pool.clone(mesh.pick(0)),
     eta: eta
   }, [], force).then(function(result) {
-    meshGeometry && meshGeometry.destroy()
-    nOverride = undefined
+    //nOverride = undefined
 
     mesh = coerce(result.mesh)
 
+    destroyGeometry()
     meshGeometry = drawMesh(v, mesh)
+    if (config.points) pointGeometry = drawPoints(v, mesh, 1)
     v.dirty = true
 
     cb && cb()
-  }).catch(function (error) { })
+  }).catch(function (error) {
+    //console.log(error)
+  })
 }
 
 createDatGUI(config, {
+  panels: {
+    airfoil: {
+      collapse: params.collapse.indexOf('airfoil') !== -1,
+      hide: params.hide.indexOf('airfoil') !== -1,
+    },
+    mesh: {
+      collapse: params.collapse.indexOf('mesh') !== -1,
+      hide: params.hide.indexOf('mesh') !== -1,
+    }
+  },
   handlers: {
     airfoil: {
-      change: function () {initializeMesh()},
+      change: function () {
+        initializeMesh(function () {
+          createMesh(null, true)
+        })
+      },
       finish: function () {
-        initializeMesh(null, true)
-        createMesh(null, true)
+        initializeMesh(function () {
+          createMesh(null, true)
+        })
       },
     },
     mesh: {
@@ -121,10 +141,10 @@ createDatGUI(config, {
 })
 
 var v = new Viewport ('canvas', {
-  xmin: -0.6,
-  xmax: 1.6,
-  ymin: 0.15 - 1,
-  ymax: 0.15 + 1,
+  xmin: config.xmin,
+  xmax: config.xmax,
+  ymin: config.ymin,
+  ymax: config.ymax,
   aspectRatio: 1,
   devicePixelRatio: window.devicePixelRatio,
   antialias: false,
