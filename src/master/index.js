@@ -37,6 +37,10 @@ for (var i = 0; i < booleanParams.length; i++) {
   config[param] = params[param] !== 'false'
 }
 
+if (Modernizr.touchEvents) {
+  params['collapse'] = ['mesh', 'airfoil']
+}
+
 config.integrator = params.integrator
 
 if (naca.isValid(params.naca)) {

@@ -23,6 +23,7 @@
     "guid": "0.0.12",
     "mouse-change": "^1.2.1",
     "mouse-event": "^1.0.5",
+    "mouse-event-offset": "^3.0.2",
     "mouse-wheel": "^1.0.2",
     "naca-four-digit-airfoil": "^1.0.4",
     "ndarray": "^1.0.18",

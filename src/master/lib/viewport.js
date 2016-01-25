@@ -7,6 +7,7 @@ var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
 var touchPinch = require('touch-pinch')
+var eventOffset = require('mouse-event-offset')
 
 //window.THREE = three
 //require('three/examples/js/renderers/Projector')
@@ -96,12 +97,43 @@ function Viewport (id, options) {
 Viewport.prototype.attachPinch = function () {
   var x0, y0
 
-  this.canvas.addEventListener('touchstart', function(e) {
-    e.preventDefault()
-  })
+  this.canvas.addEventListener('touchstart', function(ev) {
+    ev.preventDefault()
 
-  this.canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault()
+    if (ev.touches.length !== 1) return
+    var target = ev.currentTarget
+    var touch = ev.changedTouches[0]
+    var pos = eventOffset(touch, target)
+
+    this.mouse.i = pos[0]
+    this.mouse.j = pos[1]
+    this.mouse.x = this.camera.left + this.mouse.i * this.xscale
+    this.mouse.y = this.camera.top + this.mouse.j * this.yscale
+
+    console.log(pos)
+  }.bind(this))
+
+  this.canvas.addEventListener('touchmove', function(ev) {
+    var initialized = this.mouse.i !== undefined
+    ev.preventDefault()
+
+    if (ev.touches.length !== 1) return
+
+    var target = ev.currentTarget
+    var touch = ev.changedTouches[0]
+    var pos = eventOffset(touch, target)
+
+    this.mouse.i = pos[0]
+    this.mouse.j = pos[1]
+    var x = this.camera.left + this.mouse.i * this.xscale
+    var y = this.camera.top + this.mouse.j * this.yscale
+    var dx = x - this.mouse.x
+    var dy = y - this.mouse.y
+    this.mouse.x = x
+    this.mouse.y = y
+
+    if (initialized) this.pan(dx, dy)
+
   }.bind(this))
 
   this.pinch = touchPinch(this.canvas)
@@ -110,35 +142,41 @@ Viewport.prototype.attachPinch = function () {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
-    var i = 0.5 * (pos1[0] + pos2[0])
-    var j = 0.5 * (pos1[1] + pos2[1])
-    console.log(i,j)
+    this.mouse.i = 0.5 * (pos1[0] + pos2[0])
+    this.mouse.j = 0.5 * (pos1[1] + pos2[1])
 
-    var x = this.camera.left + i * this.xscale
-    var y = this.camera.top + j * this.yscale
+    this.mouse.x = this.camera.left + this.mouse.i * this.xscale
+    this.mouse.y = this.camera.top + this.mouse.j * this.yscale
+  }.bind(this))
 
-    this.mouse.x = x
-    this.mouse.y = y
-  }.bind(this)).on('change', function(dist, prevDist) {
+  this.pinch.on('change', function(dist, prevDist) {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
     var i = 0.5 * (pos1[0] + pos2[0])
     var j = 0.5 * (pos1[1] + pos2[1])
 
-    var x = this.camera.left + i * this.xscale
-    var y = this.camera.top + j * this.yscale
+    var di = i - this.mouse.i
+    var dj = j - this.mouse.j
 
-    this.mouse.x = x
-    this.mouse.y = y
+    var dx = di * this.xscale
+    var dy = dj * this.yscale
 
-    var dx = x - this.mouse.x
-    var dy = y - this.mouse.y
+    this.mouse.i = i
+    this.mouse.j = j
+
+    this.mouse.x = this.camera.left + i * this.xscale
+    this.mouse.y = this.camera.top + j * this.yscale
+
+    this.pan(dx, dy)
 
     this.zoom(prevDist / dist)
 
-    this.pan(dx, dy)
-  }.bind(this)).on('place', function(a, b) {
+  }.bind(this)).on('end', function(a, b) {
+    this.mouse.i = undefined
+    this.mouse.j = undefined
+    this.mouse.x = undefined
+    this.mouse.y = undefined
   }.bind(this))
 }
 
