@@ -2737,8 +2737,35 @@ function mouseRelativeY(ev) {
 exports.y = mouseRelativeY
 
 },{}],24:[function(require,module,exports){
+var rootPosition = { left: 0, top: 0 }
+
+module.exports = mouseEventOffset
+function mouseEventOffset (ev, target, out) {
+  target = target || ev.currentTarget || ev.srcElement
+  if (!Array.isArray(out)) {
+    out = [ 0, 0 ]
+  }
+  var cx = ev.clientX || 0
+  var cy = ev.clientY || 0
+  var rect = getBoundingClientOffset(target)
+  out[0] = cx - rect.left
+  out[1] = cy - rect.top
+  return out
+}
+
+function getBoundingClientOffset (element) {
+  if (element === window ||
+      element === document ||
+      element === document.body) {
+    return rootPosition
+  } else {
+    return element.getBoundingClientRect()
+  }
+}
+
+},{}],25:[function(require,module,exports){
 arguments[4][23][0].apply(exports,arguments)
-},{"dup":23}],25:[function(require,module,exports){
+},{"dup":23}],26:[function(require,module,exports){
 module.exports = function parseUnit(str, out) {
     if (!out)
         out = [ 0, '' ]
@@ -2749,7 +2776,7 @@ module.exports = function parseUnit(str, out) {
     out[1] = str.match(/[\d.\-\+]*\s*(.*)/)[1] || ''
     return out
 }
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict'
 
 var parseUnit = require('parse-unit')
@@ -2810,7 +2837,7 @@ function toPX(str, element) {
   }
   return 1
 }
-},{"parse-unit":25}],27:[function(require,module,exports){
+},{"parse-unit":26}],28:[function(require,module,exports){
 'use strict'
 
 var toPX = require('to-px')
@@ -2849,7 +2876,7 @@ function mouseWheelListen(element, callback, noScroll) {
     }
   })
 }
-},{"to-px":26}],28:[function(require,module,exports){
+},{"to-px":27}],29:[function(require,module,exports){
 'use strict'
 
 airfoil.thickness = thickness
@@ -3030,7 +3057,7 @@ function evaluate (x, c, m, p, t) {
   ]
 }
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -3493,7 +3520,7 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":30}],30:[function(require,module,exports){
+},{"cwise-compiler":31}],31:[function(require,module,exports){
 "use strict"
 
 var createThunk = require("./lib/thunk.js")
@@ -3604,7 +3631,7 @@ function compileCwise(user_args) {
 
 module.exports = compileCwise
 
-},{"./lib/thunk.js":32}],31:[function(require,module,exports){
+},{"./lib/thunk.js":33}],32:[function(require,module,exports){
 "use strict"
 
 var uniq = require("uniq")
@@ -3960,7 +3987,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":33}],32:[function(require,module,exports){
+},{"uniq":34}],33:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -4048,7 +4075,7 @@ function createThunk(proc) {
 
 module.exports = createThunk
 
-},{"./compile.js":31}],33:[function(require,module,exports){
+},{"./compile.js":32}],34:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -4107,7 +4134,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /**
  * Bit twiddling hacks for JavaScript.
  *
@@ -4313,7 +4340,7 @@ exports.nextCombination = function(v) {
 }
 
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 "use strict"
 
 function dupe_array(count, value, i) {
@@ -4363,7 +4390,7 @@ function dupe(count, value) {
 }
 
 module.exports = dupe
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (global,Buffer){
 'use strict'
 
@@ -4580,7 +4607,7 @@ exports.clearCache = function clearCache() {
   }
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"bit-twiddle":34,"buffer":1,"dup":35}],37:[function(require,module,exports){
+},{"bit-twiddle":35,"buffer":1,"dup":36}],38:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -4688,7 +4715,7 @@ function eye(shape, dtype) {
 }
 exports.eye = eye
 
-},{"ndarray":41,"ndarray-ops":29,"typedarray-pool":36}],38:[function(require,module,exports){
+},{"ndarray":42,"ndarray-ops":30,"typedarray-pool":37}],39:[function(require,module,exports){
 var showf = require('fixed-width-float');
 var ndarray = require('ndarray');
 
@@ -4744,7 +4771,7 @@ function d4 (m, opts) {
     return rows.join('\n' + Array(len+1).join('-') + '\n\n');
 }
 
-},{"fixed-width-float":39,"ndarray":41}],39:[function(require,module,exports){
+},{"fixed-width-float":40,"ndarray":42}],40:[function(require,module,exports){
 var sprintf = require('sprintf');
 module.exports = format;
 
@@ -4831,7 +4858,7 @@ function packf (x, bytes) {
     return pad(s, bytes).slice(0, bytes);
 }
 
-},{"sprintf":40}],40:[function(require,module,exports){
+},{"sprintf":41}],41:[function(require,module,exports){
 /**
 sprintf() for JavaScript 0.7-beta1
 http://www.diveintojavascript.com/projects/javascript-sprintf
@@ -5082,7 +5109,7 @@ module.exports = sprintf;
 sprintf.sprintf = sprintf;
 sprintf.vsprintf = vsprintf;
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -5427,7 +5454,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":42,"is-buffer":43}],42:[function(require,module,exports){
+},{"iota-array":43,"is-buffer":44}],43:[function(require,module,exports){
 "use strict"
 
 function iota(n) {
@@ -5439,7 +5466,7 @@ function iota(n) {
 }
 
 module.exports = iota
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /**
  * Determine if an object is Buffer
  *
@@ -5458,7 +5485,7 @@ module.exports = function (obj) {
     ))
 }
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 'use strict';
 var strictUriEncode = require('strict-uri-encode');
 
@@ -5526,7 +5553,7 @@ exports.stringify = function (obj) {
 	}).join('&') : '';
 };
 
-},{"strict-uri-encode":45}],45:[function(require,module,exports){
+},{"strict-uri-encode":46}],46:[function(require,module,exports){
 'use strict';
 module.exports = function (str) {
 	return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
@@ -5534,7 +5561,7 @@ module.exports = function (str) {
 	});
 };
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 module.exports = shallow
 
 function shallow(a, b, compare) {
@@ -5610,7 +5637,7 @@ function flat(type) {
   )
 }
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -41799,7 +41826,7 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 var getDistance = require('gl-vec2/distance')
 var EventEmitter = require('events').EventEmitter
 var dprop = require('dprop')
@@ -41949,7 +41976,7 @@ function Finger () {
   this.touch = null
 }
 
-},{"dprop":49,"events":5,"gl-vec2/distance":50,"mouse-event-offset":51}],49:[function(require,module,exports){
+},{"dprop":50,"events":5,"gl-vec2/distance":51,"mouse-event-offset":52}],50:[function(require,module,exports){
 module.exports = defaultProperty
 
 function defaultProperty (get, set) {
@@ -41961,7 +41988,7 @@ function defaultProperty (get, set) {
   }
 }
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 module.exports = distance
 
 /**
@@ -41976,34 +42003,9 @@ function distance(a, b) {
         y = b[1] - a[1]
     return Math.sqrt(x*x + y*y)
 }
-},{}],51:[function(require,module,exports){
-var rootPosition = { left: 0, top: 0 }
-
-module.exports = mouseEventOffset
-function mouseEventOffset (ev, target, out) {
-  target = target || ev.currentTarget || ev.srcElement
-  if (!Array.isArray(out)) {
-    out = [ 0, 0 ]
-  }
-  var cx = ev.clientX || 0
-  var cy = ev.clientY || 0
-  var rect = getBoundingClientOffset(target)
-  out[0] = cx - rect.left
-  out[1] = cy - rect.top
-  return out
-}
-
-function getBoundingClientOffset (element) {
-  if (element === window ||
-      element === document ||
-      element === document.body) {
-    return rootPosition
-  } else {
-    return element.getBoundingClientRect()
-  }
-}
-
 },{}],52:[function(require,module,exports){
+arguments[4][24][0].apply(exports,arguments)
+},{"dup":24}],53:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -42038,7 +42040,7 @@ function extend(origin, add) {
   return origin;
 }
 
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict'
 
 var ndarray = require('ndarray')
@@ -42054,7 +42056,7 @@ function coerce (data) {
   )
 }
 
-},{"ndarray":41}],54:[function(require,module,exports){
+},{"ndarray":42}],55:[function(require,module,exports){
 /* global location, window */
 'use strict'
 
@@ -42211,7 +42213,7 @@ var v = new Viewport ('canvas', {
 
 initializeMesh(createMesh)
 
-},{"../lib/ndarray-coerce":53,"./lib/config":55,"./lib/defaults":56,"./lib/draw-mesh":57,"./lib/draw-points":58,"./lib/viewport":60,"./lib/work-dispatcher":61,"naca-four-digit-airfoil":28,"ndarray-scratch":37,"ndarray-show":38,"query-string":44,"shallow-equals":46,"three":47,"util-extend":52}],55:[function(require,module,exports){
+},{"../lib/ndarray-coerce":54,"./lib/config":56,"./lib/defaults":57,"./lib/draw-mesh":58,"./lib/draw-points":59,"./lib/viewport":61,"./lib/work-dispatcher":62,"naca-four-digit-airfoil":29,"ndarray-scratch":38,"ndarray-show":39,"query-string":45,"shallow-equals":47,"three":48,"util-extend":53}],56:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -42283,7 +42285,7 @@ function createDatGUI (state, config) {
   }
 }
 
-},{"util-extend":52}],56:[function(require,module,exports){
+},{"util-extend":53}],57:[function(require,module,exports){
 'use strict'
 
 module.exports = {
@@ -42307,7 +42309,7 @@ module.exports = {
   integrator: 'rk4'
 }
 
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -42360,7 +42362,7 @@ module.exports = function drawMesh (v, mesh, n) {
   }
 }
 
-},{"ndarray-show":38,"three":47}],58:[function(require,module,exports){
+},{"ndarray-show":39,"three":48}],59:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -42391,7 +42393,7 @@ module.exports = function drawPoints (v, mesh, n) {
   }
 }
 
-},{"ndarray-show":38,"three":47}],59:[function(require,module,exports){
+},{"ndarray-show":39,"three":48}],60:[function(require,module,exports){
 /**
  * @author alteredq / http://alteredqualia.com/
  * @author mr.doob / http://mrdoob.com/
@@ -42473,7 +42475,7 @@ if ( typeof module === 'object' ) {
 
 }
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 'use strict'
 
 var Detector = require('./threejs-detector.js')
@@ -42483,6 +42485,7 @@ var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
 var touchPinch = require('touch-pinch')
+var eventOffset = require('mouse-event-offset')
 
 //window.THREE = three
 //require('three/examples/js/renderers/Projector')
@@ -42572,12 +42575,43 @@ function Viewport (id, options) {
 Viewport.prototype.attachPinch = function () {
   var x0, y0
 
-  this.canvas.addEventListener('touchstart', function(e) {
-    e.preventDefault()
-  })
+  this.canvas.addEventListener('touchstart', function(ev) {
+    ev.preventDefault()
 
-  this.canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault()
+    if (ev.touches.length !== 1) return
+    var target = ev.currentTarget
+    var touch = ev.changedTouches[0]
+    var pos = eventOffset(touch, target)
+
+    this.mouse.i = pos[0]
+    this.mouse.j = pos[1]
+    this.mouse.x = this.camera.left + this.mouse.i * this.xscale
+    this.mouse.y = this.camera.top + this.mouse.j * this.yscale
+
+    console.log(pos)
+  }.bind(this))
+
+  this.canvas.addEventListener('touchmove', function(ev) {
+    var initialized = this.mouse.i !== undefined
+    ev.preventDefault()
+
+    if (ev.touches.length !== 1) return
+
+    var target = ev.currentTarget
+    var touch = ev.changedTouches[0]
+    var pos = eventOffset(touch, target)
+
+    this.mouse.i = pos[0]
+    this.mouse.j = pos[1]
+    var x = this.camera.left + this.mouse.i * this.xscale
+    var y = this.camera.top + this.mouse.j * this.yscale
+    var dx = x - this.mouse.x
+    var dy = y - this.mouse.y
+    this.mouse.x = x
+    this.mouse.y = y
+
+    if (initialized) this.pan(dx, dy)
+
   }.bind(this))
 
   this.pinch = touchPinch(this.canvas)
@@ -42591,8 +42625,9 @@ Viewport.prototype.attachPinch = function () {
 
     this.mouse.x = this.camera.left + this.mouse.i * this.xscale
     this.mouse.y = this.camera.top + this.mouse.j * this.yscale
+  }.bind(this))
 
-  }.bind(this)).on('change', function(dist, prevDist) {
+  this.pinch.on('change', function(dist, prevDist) {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
@@ -42602,25 +42637,24 @@ Viewport.prototype.attachPinch = function () {
     var di = i - this.mouse.i
     var dj = j - this.mouse.j
 
-    this.mouse.i = i
-    this.mouse.j = j
-
-    console.log(di, dj)
-
-    var x = this.camera.left + i * this.xscale
-    var y = this.camera.top + j * this.yscale
-
     var dx = di * this.xscale
     var dy = dj * this.yscale
 
-    this.mouse.x = x
-    this.mouse.y = y
+    this.mouse.i = i
+    this.mouse.j = j
+
+    this.mouse.x = this.camera.left + i * this.xscale
+    this.mouse.y = this.camera.top + j * this.yscale
 
     this.pan(dx, dy)
 
     this.zoom(prevDist / dist)
 
-  }.bind(this)).on('place', function(a, b) {
+  }.bind(this)).on('end', function(a, b) {
+    this.mouse.i = undefined
+    this.mouse.j = undefined
+    this.mouse.x = undefined
+    this.mouse.y = undefined
   }.bind(this))
 }
 
@@ -42735,7 +42769,7 @@ Viewport.prototype.applyAspectRatio = function () {
   this.camera.top = yc + dy
 }
 
-},{"./threejs-detector.js":59,"mouse-change":22,"mouse-event":24,"mouse-wheel":27,"three":47,"touch-pinch":48,"util-extend":52}],61:[function(require,module,exports){
+},{"./threejs-detector.js":60,"mouse-change":22,"mouse-event":25,"mouse-event-offset":24,"mouse-wheel":28,"three":48,"touch-pinch":49,"util-extend":53}],62:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -42825,4 +42859,4 @@ WorkDispatcher.prototype.start = function (task, data) {
   }.bind(this), false)
 }
 
-},{"event-emitter":6,"guid":21,"util-extend":52}]},{},[54]);
+},{"event-emitter":6,"guid":21,"util-extend":53}]},{},[55]);
