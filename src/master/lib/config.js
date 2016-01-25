@@ -67,4 +67,8 @@ function createDatGUI (state, config) {
       }
     }
   }
+
+  if (config.close) {
+    gui.close()
+  }
 }

@@ -109,8 +109,6 @@ Viewport.prototype.attachPinch = function () {
     this.mouse.j = pos[1]
     this.mouse.x = this.camera.left + this.mouse.i * this.xscale
     this.mouse.y = this.camera.top + this.mouse.j * this.yscale
-
-    console.log(pos)
   }.bind(this))
 
   this.canvas.addEventListener('touchmove', function(ev) {
