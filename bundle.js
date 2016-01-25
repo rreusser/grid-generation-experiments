@@ -42599,8 +42599,8 @@ Viewport.prototype.attachPinch = function () {
     var i = 0.5 * (pos1[0] + pos2[0])
     var j = 0.5 * (pos1[1] + pos2[1])
 
-    var di = this.mouse.i - i
-    var dj = this.mouse.j - j
+    var di = i - this.mouse.i
+    var dj = j - this.mouse.j
 
     this.mouse.i = i
     this.mouse.j = j
