@@ -42570,21 +42570,51 @@ function Viewport (id, options) {
 }
 
 Viewport.prototype.attachPinch = function () {
+  var x0, y0
+
   this.canvas.addEventListener('touchstart', function(e) {
     e.preventDefault()
   })
+
   this.canvas.addEventListener('touchmove', function(e) {
-    console.log(this.pinch)
     e.preventDefault()
   }.bind(this))
+
   this.pinch = touchPinch(this.canvas)
+
   this.pinch.on('start', function (a,b) {
-    console.log(a,b)
+    var pos1 = this.pinch.fingers[0].position
+    var pos2 = this.pinch.fingers[1].position
+
+    var i = 0.5 * (pos1[0] + pos2[0])
+    var j = 0.5 * (pos1[1] + pos2[1])
+    console.log(i,j)
+
+    var x = this.camera.left + i * this.xscale
+    var y = this.camera.top + j * this.yscale
+
+    this.mouse.x = x
+    this.mouse.y = y
   }.bind(this)).on('change', function(dist, prevDist) {
-    this.zoom((dist - prevDist) * -0.1 )
-    console.log(this.pinch.fingers)
+    var pos1 = this.pinch.fingers[0].position
+    var pos2 = this.pinch.fingers[1].position
+
+    var i = 0.5 * (pos1[0] + pos2[0])
+    var j = 0.5 * (pos1[1] + pos2[1])
+
+    var x = this.camera.left + i * this.xscale
+    var y = this.camera.top + j * this.yscale
+
+    this.mouse.x = x
+    this.mouse.y = y
+
+    var dx = x - this.mouse.x
+    var dy = y - this.mouse.y
+
+    this.zoom(prevDist / dist)
+
+    this.pan(dx, dy)
   }.bind(this)).on('place', function(a, b) {
-    console.log(a, b)
   }.bind(this))
 }
 
@@ -42631,13 +42661,11 @@ Viewport.prototype.zoom = function (amount) {
   var dxB = this.camera.bottom - this.mouse.y
   var dxT = this.camera.top - this.mouse.y
 
-  var scalar = Math.exp(amount * this.zoomSpeed)
-
   this.setBounds(
-    this.mouse.x + dxL * scalar,
-    this.mouse.x + dxR * scalar,
-    this.mouse.y + dxB * scalar,
-    this.mouse.y + dxT * scalar
+    this.mouse.x + dxL * amount,
+    this.mouse.x + dxR * amount,
+    this.mouse.y + dxB * amount,
+    this.mouse.y + dxT * amount
   )
 }
 
@@ -42646,7 +42674,7 @@ Viewport.prototype.attachMouseWheel = function () {
 }
 
 Viewport.prototype.onMouseWheel = function (dx, dy) {
-  this.zoom(dy)
+  this.zoom(Math.exp(dy * this.zoomSpeed))
 }
 
 Viewport.prototype.render = function () {
