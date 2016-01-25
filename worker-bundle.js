@@ -3476,7 +3476,7 @@ function linspace () {
   return output
 }
 
-},{"ndarray-fill":29,"ndarray-scratch":50,"util-extend":61}],36:[function(require,module,exports){
+},{"ndarray-fill":29,"ndarray-scratch":50,"util-extend":62}],36:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -5491,6 +5491,55 @@ var Integrator = function Integrator( y0, deriv, t, dt ) {
 
   // Create a scratch array into which we compute the derivative:
   this._ctor = this.y.constructor
+  this._k1 = new this._ctor( this.n )
+  this._k2 = new this._ctor( this.n )
+}
+
+Integrator.prototype.step = function() {
+
+  this.deriv( this._k1, this.y, this.t )
+
+  for(var i=0; i<this.n; i++) {
+    this._k2[i] = this.y[i] + this._k1[i] * this.dt * 0.5
+  }
+
+  this.deriv( this._k1, this._k2, this.t + this.dt * 0.5 )
+
+  for(var i=0; i<this.n; i++) {
+    this.y[i] += this._k1[i] * this.dt
+  }
+
+  this.t += this.dt
+  return this
+}
+
+Integrator.prototype.steps = function( n ) {
+  for(var step=0; step<n; step++) {
+    this.step()
+  }
+  return this
+}
+
+function IntegratorFactory( y0, deriv, t, dt ) {
+  return new Integrator( y0, deriv, t, dt )
+}
+
+
+},{}],59:[function(require,module,exports){
+'use strict'
+
+module.exports = IntegratorFactory
+
+var Integrator = function Integrator( y0, deriv, t, dt ) {
+  // Bind variables to this:
+  this.deriv = deriv
+  this.y = y0
+  this.n = this.y.length
+  this.dt = dt
+  this.t = t
+
+  // Create a scratch array into which we compute the derivative:
+  this._ctor = this.y.constructor
 
   this._w = new this._ctor( this.n )
   this._k1 = new this._ctor( this.n )
@@ -5543,7 +5592,7 @@ function IntegratorFactory( y0, deriv, t, dt ) {
 }
 
 
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 'use strict'
 
 module.exports = IntegratorFactory
@@ -5833,7 +5882,7 @@ function IntegratorFactory( y0, deriv, t, dt, options ) {
 }
 
 
-},{}],60:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 module.exports = shallow
 
 function shallow(a, b, compare) {
@@ -5909,7 +5958,7 @@ function flat(type) {
   )
 }
 
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5944,7 +5993,7 @@ function extend(origin, add) {
   return origin;
 }
 
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 'use strict'
 
 var ndarray = require('ndarray')
@@ -5960,7 +6009,7 @@ function coerce (data) {
   )
 }
 
-},{"ndarray":54}],63:[function(require,module,exports){
+},{"ndarray":54}],64:[function(require,module,exports){
 'use strict'
 
 var EventLoop = require('./lib/event-loop')
@@ -6000,7 +6049,7 @@ var eventLoop = new EventLoop({
   }
 })
 
-},{"./lib/event-loop":66,"./lib/worker-state":73}],64:[function(require,module,exports){
+},{"./lib/event-loop":67,"./lib/worker-state":74}],65:[function(require,module,exports){
 'use strict'
 
 var stencil = require('finite-difference-stencil')
@@ -6044,7 +6093,7 @@ function computePeriodicDerivativeCoefficients (num, n, t, betaL, alpha, betaR, 
 }
 
 
-},{"finite-difference-stencil":22}],65:[function(require,module,exports){
+},{"finite-difference-stencil":22}],66:[function(require,module,exports){
 'use strict'
 
 var coeffs = require('./compute-periodic-derivative-coefficients')
@@ -6112,7 +6161,7 @@ Derivative.prototype.compute = function (xp, yp, x, ox, y, oy) {
   triper(n, this.betaL, this.alpha, this.betaR, xp, yp, this.w)
 }
 
-},{"./compute-periodic-derivative-coefficients":64,"./solve-periodic-tridiagonal":72}],66:[function(require,module,exports){
+},{"./compute-periodic-derivative-coefficients":65,"./solve-periodic-tridiagonal":73}],67:[function(require,module,exports){
 'use strict'
 
 module.exports = EventLoop
@@ -6153,7 +6202,7 @@ EventLoop.prototype.start = function () {
   }.bind(this))
 }
 
-},{"util-extend":61}],67:[function(require,module,exports){
+},{"util-extend":62}],68:[function(require,module,exports){
 'use strict'
 
 module.exports = hyperbolicGridDerivative
@@ -6175,7 +6224,7 @@ function hyperbolicGridDerivative (yp, y) {
 
 }
 
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 'use strict'
 
 var ops = require('ndarray-ops')
@@ -6213,7 +6262,7 @@ function incdec (out, t1, t2, n, r1, r2) {
   return out
 }
 
-},{"ndarray-ops":36,"ndarray-show":51}],69:[function(require,module,exports){
+},{"ndarray-ops":36,"ndarray-show":51}],70:[function(require,module,exports){
 'use strict'
 
 var arcLength = require('arc-length')
@@ -6280,10 +6329,11 @@ function initializeMesh (airfoilData, eta, xy, m, ratio1, ratio2) {
 }
 
 
-},{"./incdec":68,"arc-length":5,"bisect":6,"naca-four-digit-airfoil":28}],70:[function(require,module,exports){
+},{"./incdec":69,"arc-length":5,"bisect":6,"naca-four-digit-airfoil":28}],71:[function(require,module,exports){
 'use strict'
 
 var ode4 = require('ode-rk4')
+var ode2 = require('ode-midpoint')
 var ode45 = require('ode45-cash-karp')
 var euler = require('ode-euler')
 var Derivative = require('./derivative')
@@ -6312,7 +6362,10 @@ function Mesher (eta, xi, mesh, diffusion) {
 
   this.deriv = hyperbolicGridDerivative.bind(this)
 
-  this.integrator = ode4(this.f, this.deriv, 0, 0.1)
+  this.euler = euler(this.f, this.deriv, 0, 0.1)
+  this.rk2 = ode2(this.f, this.deriv, 0, 0.1)
+  this.rk4 = ode4(this.f, this.deriv, 0, 0.1)
+  this.integrator = this.rk4
   //integrator.dtMinMag = 0.001
   //integrator.dtMaxMag = 0.1
   //integrator.tol = 1e-2
@@ -6350,7 +6403,7 @@ Mesher.prototype.march = function () {
   }
 }
 
-},{"./derivative":65,"./hyperbolic-grid-derivative":67,"ode-euler":57,"ode-rk4":58,"ode45-cash-karp":59}],71:[function(require,module,exports){
+},{"./derivative":66,"./hyperbolic-grid-derivative":68,"ode-euler":57,"ode-midpoint":58,"ode-rk4":59,"ode45-cash-karp":60}],72:[function(require,module,exports){
 'use strict'
 
 module.exports = WorkerState
@@ -6389,7 +6442,7 @@ WorkerState.prototype.setState = function (newState) {
 
 
 
-},{"event-emitter":7,"shallow-equals":60}],72:[function(require,module,exports){
+},{"event-emitter":7,"shallow-equals":61}],73:[function(require,module,exports){
 'use strict'
 
 module.exports = solvePeriodicTridiagonal
@@ -6462,7 +6515,7 @@ function solvePeriodicTridiagonal (n, a, b, c, x, y, w) {
   return true
 }
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict'
 
 var ndarray = require('ndarray')
@@ -6495,6 +6548,7 @@ function WorkerState () {
     if (changes.m ||
         changes.n ||
         changes.diffusion ||
+        changes.integrator ||
         changes.stepStart ||
         changes.stepInc ||
         changes.clustering) {
@@ -6537,9 +6591,10 @@ WorkerState.prototype.createMesh = function (data) {
   }
 
   this.mesher.diffusion = this.state.diffusion
+  this.mesher.integrator = this.mesher[this.state.integrator]
   this.mesher.march()
 
   this.needsMesh = false
 }
 
-},{"../../lib//ndarray-coerce":62,"./initialize-mesh":69,"./mesher":70,"./shallow-state":71,"ndarray":54,"ndarray-linspace":35,"ndarray-ops":36,"ndarray-prefix-sum":41,"ndarray-show":51}]},{},[63]);
+},{"../../lib//ndarray-coerce":63,"./initialize-mesh":70,"./mesher":71,"./shallow-state":72,"ndarray":54,"ndarray-linspace":35,"ndarray-ops":36,"ndarray-prefix-sum":41,"ndarray-show":51}]},{},[64]);

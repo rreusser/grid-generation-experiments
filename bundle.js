@@ -1766,6 +1766,306 @@ module.exports = Array.isArray || function (arr) {
 };
 
 },{}],5:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      }
+      throw TypeError('Uncaught, unspecified "error" event.');
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    args = Array.prototype.slice.call(arguments, 1);
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else if (listeners) {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.prototype.listenerCount = function(type) {
+  if (this._events) {
+    var evlistener = this._events[type];
+
+    if (isFunction(evlistener))
+      return 1;
+    else if (evlistener)
+      return evlistener.length;
+  }
+  return 0;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  return emitter.listenerCount(type);
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
+
+},{}],6:[function(require,module,exports){
 'use strict';
 
 var d        = require('d')
@@ -1899,7 +2199,7 @@ module.exports = exports = function (o) {
 };
 exports.methods = methods;
 
-},{"d":6,"es5-ext/object/valid-callable":15}],6:[function(require,module,exports){
+},{"d":7,"es5-ext/object/valid-callable":16}],7:[function(require,module,exports){
 'use strict';
 
 var assign        = require('es5-ext/object/assign')
@@ -1964,14 +2264,14 @@ d.gs = function (dscr, get, set/*, options*/) {
 	return !options ? desc : assign(normalizeOpts(options), desc);
 };
 
-},{"es5-ext/object/assign":7,"es5-ext/object/is-callable":10,"es5-ext/object/normalize-options":14,"es5-ext/string/#/contains":17}],7:[function(require,module,exports){
+},{"es5-ext/object/assign":8,"es5-ext/object/is-callable":11,"es5-ext/object/normalize-options":15,"es5-ext/string/#/contains":18}],8:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./is-implemented')()
 	? Object.assign
 	: require('./shim');
 
-},{"./is-implemented":8,"./shim":9}],8:[function(require,module,exports){
+},{"./is-implemented":9,"./shim":10}],9:[function(require,module,exports){
 'use strict';
 
 module.exports = function () {
@@ -1982,7 +2282,7 @@ module.exports = function () {
 	return (obj.foo + obj.bar + obj.trzy) === 'razdwatrzy';
 };
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var keys  = require('../keys')
@@ -2006,21 +2306,21 @@ module.exports = function (dest, src/*, …srcn*/) {
 	return dest;
 };
 
-},{"../keys":11,"../valid-value":16}],10:[function(require,module,exports){
+},{"../keys":12,"../valid-value":17}],11:[function(require,module,exports){
 // Deprecated
 
 'use strict';
 
 module.exports = function (obj) { return typeof obj === 'function'; };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./is-implemented')()
 	? Object.keys
 	: require('./shim');
 
-},{"./is-implemented":12,"./shim":13}],12:[function(require,module,exports){
+},{"./is-implemented":13,"./shim":14}],13:[function(require,module,exports){
 'use strict';
 
 module.exports = function () {
@@ -2030,7 +2330,7 @@ module.exports = function () {
 	} catch (e) { return false; }
 };
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 var keys = Object.keys;
@@ -2039,7 +2339,7 @@ module.exports = function (object) {
 	return keys(object == null ? object : Object(object));
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 var forEach = Array.prototype.forEach, create = Object.create;
@@ -2058,7 +2358,7 @@ module.exports = function (options/*, …options*/) {
 	return result;
 };
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 module.exports = function (fn) {
@@ -2066,7 +2366,7 @@ module.exports = function (fn) {
 	return fn;
 };
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 module.exports = function (value) {
@@ -2074,14 +2374,14 @@ module.exports = function (value) {
 	return value;
 };
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./is-implemented')()
 	? String.prototype.contains
 	: require('./shim');
 
-},{"./is-implemented":18,"./shim":19}],18:[function(require,module,exports){
+},{"./is-implemented":19,"./shim":20}],19:[function(require,module,exports){
 'use strict';
 
 var str = 'razdwatrzy';
@@ -2091,7 +2391,7 @@ module.exports = function () {
 	return ((str.contains('dwa') === true) && (str.contains('foo') === false));
 };
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 var indexOf = String.prototype.indexOf;
@@ -2100,7 +2400,7 @@ module.exports = function (searchString/*, position*/) {
 	return indexOf.call(this, searchString, arguments[1]) > -1;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 (function () {
   var validator = new RegExp("^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$", "i");
 
@@ -2165,7 +2465,7 @@ module.exports = function (searchString/*, position*/) {
   }
 })();
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict'
 
 module.exports = mouseListen
@@ -2374,7 +2674,7 @@ function mouseListen(element, callback) {
   return result
 }
 
-},{"mouse-event":22}],22:[function(require,module,exports){
+},{"mouse-event":23}],23:[function(require,module,exports){
 'use strict'
 
 function mouseButtons(ev) {
@@ -2436,9 +2736,9 @@ function mouseRelativeY(ev) {
 }
 exports.y = mouseRelativeY
 
-},{}],23:[function(require,module,exports){
-arguments[4][22][0].apply(exports,arguments)
-},{"dup":22}],24:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
+arguments[4][23][0].apply(exports,arguments)
+},{"dup":23}],25:[function(require,module,exports){
 module.exports = function parseUnit(str, out) {
     if (!out)
         out = [ 0, '' ]
@@ -2449,7 +2749,7 @@ module.exports = function parseUnit(str, out) {
     out[1] = str.match(/[\d.\-\+]*\s*(.*)/)[1] || ''
     return out
 }
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict'
 
 var parseUnit = require('parse-unit')
@@ -2510,7 +2810,7 @@ function toPX(str, element) {
   }
   return 1
 }
-},{"parse-unit":24}],26:[function(require,module,exports){
+},{"parse-unit":25}],27:[function(require,module,exports){
 'use strict'
 
 var toPX = require('to-px')
@@ -2549,7 +2849,7 @@ function mouseWheelListen(element, callback, noScroll) {
     }
   })
 }
-},{"to-px":25}],27:[function(require,module,exports){
+},{"to-px":26}],28:[function(require,module,exports){
 'use strict'
 
 airfoil.thickness = thickness
@@ -2730,7 +3030,7 @@ function evaluate (x, c, m, p, t) {
   ]
 }
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -3193,7 +3493,7 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":29}],29:[function(require,module,exports){
+},{"cwise-compiler":30}],30:[function(require,module,exports){
 "use strict"
 
 var createThunk = require("./lib/thunk.js")
@@ -3304,7 +3604,7 @@ function compileCwise(user_args) {
 
 module.exports = compileCwise
 
-},{"./lib/thunk.js":31}],30:[function(require,module,exports){
+},{"./lib/thunk.js":32}],31:[function(require,module,exports){
 "use strict"
 
 var uniq = require("uniq")
@@ -3660,7 +3960,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":32}],31:[function(require,module,exports){
+},{"uniq":33}],32:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -3748,7 +4048,7 @@ function createThunk(proc) {
 
 module.exports = createThunk
 
-},{"./compile.js":30}],32:[function(require,module,exports){
+},{"./compile.js":31}],33:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -3807,7 +4107,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /**
  * Bit twiddling hacks for JavaScript.
  *
@@ -4013,7 +4313,7 @@ exports.nextCombination = function(v) {
 }
 
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict"
 
 function dupe_array(count, value, i) {
@@ -4063,7 +4363,7 @@ function dupe(count, value) {
 }
 
 module.exports = dupe
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (global,Buffer){
 'use strict'
 
@@ -4280,7 +4580,7 @@ exports.clearCache = function clearCache() {
   }
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"bit-twiddle":33,"buffer":1,"dup":34}],36:[function(require,module,exports){
+},{"bit-twiddle":34,"buffer":1,"dup":35}],37:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -4388,7 +4688,7 @@ function eye(shape, dtype) {
 }
 exports.eye = eye
 
-},{"ndarray":40,"ndarray-ops":28,"typedarray-pool":35}],37:[function(require,module,exports){
+},{"ndarray":41,"ndarray-ops":29,"typedarray-pool":36}],38:[function(require,module,exports){
 var showf = require('fixed-width-float');
 var ndarray = require('ndarray');
 
@@ -4444,7 +4744,7 @@ function d4 (m, opts) {
     return rows.join('\n' + Array(len+1).join('-') + '\n\n');
 }
 
-},{"fixed-width-float":38,"ndarray":40}],38:[function(require,module,exports){
+},{"fixed-width-float":39,"ndarray":41}],39:[function(require,module,exports){
 var sprintf = require('sprintf');
 module.exports = format;
 
@@ -4531,7 +4831,7 @@ function packf (x, bytes) {
     return pad(s, bytes).slice(0, bytes);
 }
 
-},{"sprintf":39}],39:[function(require,module,exports){
+},{"sprintf":40}],40:[function(require,module,exports){
 /**
 sprintf() for JavaScript 0.7-beta1
 http://www.diveintojavascript.com/projects/javascript-sprintf
@@ -4782,7 +5082,7 @@ module.exports = sprintf;
 sprintf.sprintf = sprintf;
 sprintf.vsprintf = vsprintf;
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -5127,7 +5427,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":41,"is-buffer":42}],41:[function(require,module,exports){
+},{"iota-array":42,"is-buffer":43}],42:[function(require,module,exports){
 "use strict"
 
 function iota(n) {
@@ -5139,7 +5439,7 @@ function iota(n) {
 }
 
 module.exports = iota
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /**
  * Determine if an object is Buffer
  *
@@ -5158,7 +5458,7 @@ module.exports = function (obj) {
     ))
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 'use strict';
 var strictUriEncode = require('strict-uri-encode');
 
@@ -5226,7 +5526,7 @@ exports.stringify = function (obj) {
 	}).join('&') : '';
 };
 
-},{"strict-uri-encode":44}],44:[function(require,module,exports){
+},{"strict-uri-encode":45}],45:[function(require,module,exports){
 'use strict';
 module.exports = function (str) {
 	return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
@@ -5234,7 +5534,7 @@ module.exports = function (str) {
 	});
 };
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 module.exports = shallow
 
 function shallow(a, b, compare) {
@@ -5310,7 +5610,7 @@ function flat(type) {
   )
 }
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -41499,7 +41799,211 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
+var getDistance = require('gl-vec2/distance')
+var EventEmitter = require('events').EventEmitter
+var dprop = require('dprop')
+var eventOffset = require('mouse-event-offset')
+
+module.exports = touchPinch
+function touchPinch (target) {
+  target = target || window
+
+  var emitter = new EventEmitter()
+  var fingers = [ null, null ]
+  var activeCount = 0
+
+  var lastDistance = 0
+  var ended = false
+  var enabled = false
+
+  // some read-only values
+  Object.defineProperties(emitter, {
+    pinching: dprop(function () {
+      return activeCount === 2
+    }),
+
+    fingers: dprop(function () {
+      return fingers
+    })
+  })
+
+  enable()
+  emitter.enable = enable
+  emitter.disable = disable
+  emitter.indexOfTouch = indexOfTouch
+  return emitter
+
+  function indexOfTouch (touch) {
+    var id = touch.identifier
+    for (var i = 0; i < fingers.length; i++) {
+      if (fingers[i] &&
+        fingers[i].touch &&
+        fingers[i].touch.identifier === id) {
+        return i
+      }
+    }
+    return -1
+  }
+
+  function enable () {
+    if (enabled) return
+    enabled = true
+    target.addEventListener('touchstart', onTouchStart, false)
+    target.addEventListener('touchmove', onTouchMove, false)
+    target.addEventListener('touchend', onTouchRemoved, false)
+    target.addEventListener('touchcancel', onTouchRemoved, false)
+  }
+
+  function disable () {
+    if (!enabled) return
+    enabled = false
+    target.removeEventListener('touchstart', onTouchStart, false)
+    target.removeEventListener('touchmove', onTouchMove, false)
+    target.removeEventListener('touchend', onTouchRemoved, false)
+    target.removeEventListener('touchcancel', onTouchRemoved, false)
+  }
+
+  function onTouchStart (ev) {
+    for (var i = 0; i < ev.changedTouches.length; i++) {
+      var newTouch = ev.changedTouches[i]
+      var id = newTouch.identifier
+      var idx = indexOfTouch(id)
+
+      if (idx === -1 && activeCount < 2) {
+        var first = activeCount === 0
+
+        // newest and previous finger (previous may be undefined)
+        var newIndex = fingers[0] ? 1 : 0
+        var oldIndex = fingers[0] ? 0 : 1
+        var newFinger = new Finger()
+
+        // add to stack
+        fingers[newIndex] = newFinger
+        activeCount++
+
+        // update touch event & position
+        newFinger.touch = newTouch
+        eventOffset(newTouch, target, newFinger.position)
+
+        var oldTouch = fingers[oldIndex] ? fingers[oldIndex].touch : undefined
+        emitter.emit('place', newTouch, oldTouch)
+
+        if (!first) {
+          var initialDistance = computeDistance()
+          ended = false
+          emitter.emit('start', initialDistance)
+          lastDistance = initialDistance
+        }
+      }
+    }
+  }
+
+  function onTouchMove (ev) {
+    var changed = false
+    for (var i = 0; i < ev.changedTouches.length; i++) {
+      var movedTouch = ev.changedTouches[i]
+      var idx = indexOfTouch(movedTouch)
+      if (idx !== -1) {
+        changed = true
+        fingers[idx].touch = movedTouch // avoid caching touches
+        eventOffset(movedTouch, target, fingers[idx].position)
+      }
+    }
+
+    if (activeCount === 2 && changed) {
+      var currentDistance = computeDistance()
+      emitter.emit('change', currentDistance, lastDistance)
+      lastDistance = currentDistance
+    }
+  }
+
+  function onTouchRemoved (ev) {
+    for (var i = 0; i < ev.changedTouches.length; i++) {
+      var removed = ev.changedTouches[i]
+      var idx = indexOfTouch(removed)
+
+      if (idx !== -1) {
+        fingers[idx] = null
+        activeCount--
+        var otherIdx = idx === 0 ? 1 : 0
+        var otherTouch = fingers[otherIdx] ? fingers[otherIdx].touch : undefined
+        emitter.emit('lift', removed, otherTouch)
+      }
+    }
+
+    if (!ended && activeCount !== 2) {
+      ended = true
+      emitter.emit('end')
+    }
+  }
+
+  function computeDistance () {
+    if (activeCount < 2) return 0
+    return getDistance(fingers[0].position, fingers[1].position)
+  }
+}
+
+function Finger () {
+  this.position = [0, 0]
+  this.touch = null
+}
+
+},{"dprop":49,"events":5,"gl-vec2/distance":50,"mouse-event-offset":51}],49:[function(require,module,exports){
+module.exports = defaultProperty
+
+function defaultProperty (get, set) {
+  return {
+    configurable: true,
+    enumerable: true,
+    get: get,
+    set: set
+  }
+}
+
+},{}],50:[function(require,module,exports){
+module.exports = distance
+
+/**
+ * Calculates the euclidian distance between two vec2's
+ *
+ * @param {vec2} a the first operand
+ * @param {vec2} b the second operand
+ * @returns {Number} distance between a and b
+ */
+function distance(a, b) {
+    var x = b[0] - a[0],
+        y = b[1] - a[1]
+    return Math.sqrt(x*x + y*y)
+}
+},{}],51:[function(require,module,exports){
+var rootPosition = { left: 0, top: 0 }
+
+module.exports = mouseEventOffset
+function mouseEventOffset (ev, target, out) {
+  target = target || ev.currentTarget || ev.srcElement
+  if (!Array.isArray(out)) {
+    out = [ 0, 0 ]
+  }
+  var cx = ev.clientX || 0
+  var cy = ev.clientY || 0
+  var rect = getBoundingClientOffset(target)
+  out[0] = cx - rect.left
+  out[1] = cy - rect.top
+  return out
+}
+
+function getBoundingClientOffset (element) {
+  if (element === window ||
+      element === document ||
+      element === document.body) {
+    return rootPosition
+  } else {
+    return element.getBoundingClientRect()
+  }
+}
+
+},{}],52:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -41534,7 +42038,7 @@ function extend(origin, add) {
   return origin;
 }
 
-},{}],48:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict'
 
 var ndarray = require('ndarray')
@@ -41550,7 +42054,7 @@ function coerce (data) {
   )
 }
 
-},{"ndarray":40}],49:[function(require,module,exports){
+},{"ndarray":41}],54:[function(require,module,exports){
 /* global location, window */
 'use strict'
 
@@ -41589,6 +42093,8 @@ for (var i = 0; i < booleanParams.length; i++) {
   var param = booleanParams[i]
   config[param] = params[param] !== 'false'
 }
+
+config.integrator = params.integrator
 
 if (naca.isValid(params.naca)) {
   var airfoil = naca.parse(params.naca)
@@ -41705,7 +42211,7 @@ var v = new Viewport ('canvas', {
 
 initializeMesh(createMesh)
 
-},{"../lib/ndarray-coerce":48,"./lib/config":50,"./lib/defaults":51,"./lib/draw-mesh":52,"./lib/draw-points":53,"./lib/viewport":55,"./lib/work-dispatcher":56,"naca-four-digit-airfoil":27,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],50:[function(require,module,exports){
+},{"../lib/ndarray-coerce":53,"./lib/config":55,"./lib/defaults":56,"./lib/draw-mesh":57,"./lib/draw-points":58,"./lib/viewport":60,"./lib/work-dispatcher":61,"naca-four-digit-airfoil":28,"ndarray-scratch":37,"ndarray-show":38,"query-string":44,"shallow-equals":46,"three":47,"util-extend":52}],55:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -41725,10 +42231,13 @@ function createDatGUI (state, config) {
     var camberMagController = airfoilConfig.add(state, 'camberMag', -0.5, 0.5).step(0.01)
     var camberLocController = airfoilConfig.add(state, 'camberLoc', 0, 1).step(0.01)
     var clusteringController = airfoilConfig.add(state, 'clustering', 1, 50)
+    var mController = airfoilConfig.add(state, 'm', 11, 201).step(1)
+
     if (!config.panels.airfoil.collapse) airfoilConfig.open()
 
     var init = config.handlers.airfoil
     if (init.change) {
+      mController.onChange(init.change)
       thicknessController.onChange(init.change)
       camberMagController.onChange(init.change)
       camberLocController.onChange(init.change)
@@ -41736,6 +42245,7 @@ function createDatGUI (state, config) {
     }
 
     if (init.finish) {
+      mController.onFinishChange(init.finish)
       thicknessController.onFinishChange(init.finish)
       camberMagController.onFinishChange(init.finish)
       camberLocController.onFinishChange(init.finish)
@@ -41745,35 +42255,35 @@ function createDatGUI (state, config) {
 
   if (!config.panels.mesh.hide) {
     var meshConfig = gui.addFolder('Mesh')
-    var mController = meshConfig.add(state, 'm', 11, 201).step(1)
     var nController = meshConfig.add(state, 'n', 1, 300).step(1)
     var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.005)
     var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
     var stepIncController = meshConfig.add(state, 'stepInc', 0, 0.01)
+    var integrationController = meshConfig.add(state, 'integrator', {'Euler': 'euler', 'Midpoint': 'rk2', 'Runge-Kutta 4': 'rk4'})
     if (!config.panels.mesh.collapse) meshConfig.open()
 
 
     var mesh = config.handlers.mesh
     if (mesh) {
       if (mesh.change) {
-        mController.onChange(mesh.change)
         nController.onChange(mesh.change)
         diffusionController.onChange(mesh.change)
         stepStartController.onChange(mesh.change)
         stepIncController.onChange(mesh.change)
+        integrationController.onChange(mesh.change)
       }
       if (mesh.finish) {
-        mController.onFinishChange(mesh.finish)
         nController.onFinishChange(mesh.finish)
         diffusionController.onFinishChange(mesh.finish)
         stepStartController.onFinishChange(mesh.finish)
         stepIncController.onFinishChange(mesh.finish)
+        integrationController.onFinishChange(mesh.change)
       }
     }
   }
 }
 
-},{"util-extend":47}],51:[function(require,module,exports){
+},{"util-extend":52}],56:[function(require,module,exports){
 'use strict'
 
 module.exports = {
@@ -41794,9 +42304,10 @@ module.exports = {
   collapse: [],
   hide: [],
   points: true,
+  integrator: 'rk4'
 }
 
-},{}],52:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -41849,7 +42360,7 @@ module.exports = function drawMesh (v, mesh, n) {
   }
 }
 
-},{"ndarray-show":37,"three":46}],53:[function(require,module,exports){
+},{"ndarray-show":38,"three":47}],58:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -41880,7 +42391,7 @@ module.exports = function drawPoints (v, mesh, n) {
   }
 }
 
-},{"ndarray-show":37,"three":46}],54:[function(require,module,exports){
+},{"ndarray-show":38,"three":47}],59:[function(require,module,exports){
 /**
  * @author alteredq / http://alteredqualia.com/
  * @author mr.doob / http://mrdoob.com/
@@ -41962,7 +42473,7 @@ if ( typeof module === 'object' ) {
 
 }
 
-},{}],55:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 'use strict'
 
 var Detector = require('./threejs-detector.js')
@@ -41971,6 +42482,7 @@ var extend = require('util-extend')
 var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
+var touchPinch = require('touch-pinch')
 
 //window.THREE = three
 //require('three/examples/js/renderers/Projector')
@@ -42044,6 +42556,7 @@ function Viewport (id, options) {
 
   this.attachMouseWheel()
   this.attachMouseChange()
+  this.attachPinch()
 
   var render = function () {
     if (this.dirty) {
@@ -42055,6 +42568,26 @@ function Viewport (id, options) {
 
   render()
 }
+
+Viewport.prototype.attachPinch = function () {
+  this.canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault()
+  })
+  this.canvas.addEventListener('touchmove', function(e) {
+    console.log(this.pinch)
+    e.preventDefault()
+  }.bind(this))
+  this.pinch = touchPinch(this.canvas)
+  this.pinch.on('start', function (a,b) {
+    console.log(a,b)
+  }.bind(this)).on('change', function(dist, prevDist) {
+    this.zoom((dist - prevDist) * -0.1 )
+    console.log(this.pinch.fingers)
+  }.bind(this)).on('place', function(a, b) {
+    console.log(a, b)
+  }.bind(this))
+}
+
 Viewport.prototype.attachMouseChange = function () {
   var initialized = false
   mouseChange(this.canvas, function(buttons, i, j, mods) {
@@ -42168,7 +42701,7 @@ Viewport.prototype.applyAspectRatio = function () {
   this.camera.top = yc + dy
 }
 
-},{"./threejs-detector.js":54,"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}],56:[function(require,module,exports){
+},{"./threejs-detector.js":59,"mouse-change":22,"mouse-event":24,"mouse-wheel":27,"three":47,"touch-pinch":48,"util-extend":52}],61:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -42258,4 +42791,4 @@ WorkDispatcher.prototype.start = function (task, data) {
   }.bind(this), false)
 }
 
-},{"event-emitter":5,"guid":20,"util-extend":47}]},{},[49]);
+},{"event-emitter":6,"guid":21,"util-extend":52}]},{},[54]);
