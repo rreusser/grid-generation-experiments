@@ -42586,8 +42586,8 @@ Viewport.prototype.attachPinch = function () {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
-    var i = 0.5 * (pos1[0] + pos2[0])
-    var j = 0.5 * (pos1[1] + pos2[1])
+    var i = 0.5 * (pos1[0] + pos2[0]) * 0.25
+    var j = 0.5 * (pos1[1] + pos2[1]) * 0.75
     console.log(i,j)
 
     var x = this.camera.left + i * this.xscale
@@ -42599,17 +42599,17 @@ Viewport.prototype.attachPinch = function () {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
-    var i = 0.5 * (pos1[0] + pos2[0])
-    var j = 0.5 * (pos1[1] + pos2[1])
+    var i = 0.5 * (pos1[0] + pos2[0]) * 0.25
+    var j = 0.5 * (pos1[1] + pos2[1]) * 0.75
 
     var x = this.camera.left + i * this.xscale
     var y = this.camera.top + j * this.yscale
 
-    this.mouse.x = x
-    this.mouse.y = y
-
     var dx = x - this.mouse.x
     var dy = y - this.mouse.y
+
+    this.mouse.x = x
+    this.mouse.y = y
 
     this.zoom(prevDist / dist)
 
