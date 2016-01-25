@@ -42212,7 +42212,7 @@ var v = new Viewport ('canvas', {
   ymin: config.ymin,
   ymax: config.ymax,
   aspectRatio: 1,
-  devicePixelRatio: window.devicePixelRatio * 2,
+  devicePixelRatio: window.devicePixelRatio * (Modernizr.touchevents ? 2 : 1),
   antialias: false,
 })
 
@@ -42290,7 +42290,6 @@ function createDatGUI (state, config) {
   }
 
   if (config.close) {
-    console.log(gui)
     gui.close()
   }
 }
