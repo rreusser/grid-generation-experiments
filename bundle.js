@@ -42586,34 +42586,40 @@ Viewport.prototype.attachPinch = function () {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
-    var i = 0.5 * (pos1[0] + pos2[0]) * 0.25
-    var j = 0.5 * (pos1[1] + pos2[1]) * 0.75
-    console.log(i,j)
+    this.mouse.i = 0.5 * (pos1[0] + pos2[0])
+    this.mouse.j = 0.5 * (pos1[1] + pos2[1])
 
-    var x = this.camera.left + i * this.xscale
-    var y = this.camera.top + j * this.yscale
+    this.mouse.x = this.camera.left + this.mouse.i * this.xscale
+    this.mouse.y = this.camera.top + this.mouse.j * this.yscale
 
-    this.mouse.x = x
-    this.mouse.y = y
   }.bind(this)).on('change', function(dist, prevDist) {
     var pos1 = this.pinch.fingers[0].position
     var pos2 = this.pinch.fingers[1].position
 
-    var i = 0.5 * (pos1[0] + pos2[0]) * 0.25
-    var j = 0.5 * (pos1[1] + pos2[1]) * 0.75
+    var i = 0.5 * (pos1[0] + pos2[0])
+    var j = 0.5 * (pos1[1] + pos2[1])
+
+    var di = this.mouse.i - i
+    var dj = this.mouse.j - j
+
+    this.mouse.i = i
+    this.mouse.j = j
+
+    console.log(di, dj)
 
     var x = this.camera.left + i * this.xscale
     var y = this.camera.top + j * this.yscale
 
-    var dx = x - this.mouse.x
-    var dy = y - this.mouse.y
+    var dx = di * this.xscale
+    var dy = dj * this.yscale
 
     this.mouse.x = x
     this.mouse.y = y
 
+    this.pan(dx, dy)
+
     this.zoom(prevDist / dist)
 
-    this.pan(dx, dy)
   }.bind(this)).on('place', function(a, b) {
   }.bind(this))
 }
