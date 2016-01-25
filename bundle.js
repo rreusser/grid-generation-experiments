@@ -41535,6 +41535,22 @@ function extend(origin, add) {
 }
 
 },{}],48:[function(require,module,exports){
+'use strict'
+
+var ndarray = require('ndarray')
+
+module.exports = coerce
+
+function coerce (data) {
+  return ndarray(
+    data.data,
+    data.shape,
+    data.stride,
+    data.offset
+  )
+}
+
+},{"ndarray":40}],49:[function(require,module,exports){
 /* global location, window */
 'use strict'
 
@@ -41548,39 +41564,30 @@ var Viewport = require('./lib/viewport')
 var naca = require('naca-four-digit-airfoil')
 var createDatGUI = require('./lib/config')
 var drawMesh = require('./lib/draw-mesh')
+var drawPoints = require('./lib/draw-points')
 var equals = require('shallow-equals')
+var coerce = require('../lib/ndarray-coerce')
+var defaults = require('./lib/defaults')
 
-window.ndarray = require('ndarray')
+var params = extend(defaults, queryString.parse(location.search))
 
-function coerce (data) {return ndarray(data.data, data.shape, data.stride, data.offset)}
+var numericalParams = [
+  'thickness', 'camberMag', 'camberLoc', 'm', 'n',
+  'diffusion', 'stepStart', 'stepInc', 'clustering',
+  'xmin', 'xmax', 'ymin', 'ymax'
+]
 
-var params
+var config = {}
+for (var i = 0; i < numericalParams.length; i++) {
+  var param = numericalParams[i]
+  config[param] = Number(params[param])
+}
 
-params = extend({
-  naca: null,
-  m: 151,
-  n: 50,
-  thickness: 0.12,
-  camberMag: 0.05,
-  camberLoc: 0.4,
-  stepInc: 0.001,
-  stepStart: 0.002,
-  diffusion: 0.001,
-  clustering: 20,
-}, queryString.parse(location.search))
+var booleanParams = ['points']
 
-var dispatcher = new WorkDispatcher('worker-bundle.js')
-
-var config = {
-  thickness: Number(params.thickness),
-  camberMag: Number(params.camberMag),
-  camberLoc: Number(params.camberLoc),
-  m: Number(params.m),
-  n: Number(params.n),
-  diffusion: Number(params.diffusion),
-  stepStart: Number(params.stepStart),
-  stepInc: Number(params.stepInc),
-  clustering: Number(params.clustering),
+for (var i = 0; i < booleanParams.length; i++) {
+  var param = booleanParams[i]
+  config[param] = params[param] !== 'false'
 }
 
 if (naca.isValid(params.naca)) {
@@ -41592,29 +41599,40 @@ if (naca.isValid(params.naca)) {
 
 var mesh, eta, xi
 var meshGeometry
+var pointGeometry
 var nOverride
 
-function destroyMesh () {
+function destroyGeometry () {
   meshGeometry && meshGeometry.destroy()
   meshGeometry = null
+
+  pointGeometry && pointGeometry.destroy()
+  pointGeometry = null
 }
+
+var dispatcher = new WorkDispatcher('worker-bundle.js')
 
 function initializeMesh (cb, force) {
   dispatcher.request('initializeGrid', {
     params: config,
   }, [], force).then(function(result) {
 
-    destroyMesh()
-
-    nOverride = 1
+    //nOverride = 1
     mesh = coerce(result.mesh)
     eta = coerce(result.eta)
 
-    meshGeometry = drawMesh(v, mesh, nOverride === undefined ? config.n : nOverride)
-    v.dirty = true
+    if (false) {
+      destroyGeometry()
+      meshGeometry = drawMesh(v, mesh, nOverride === undefined ? config.n : nOverride)
+      if (config.points) pointGeometry = drawPoints(v, mesh, 1)
+
+      v.dirty = true
+    }
 
     cb && cb()
-  }).catch(function (error) { })
+  }).catch(function (error) {
+    //console.log(error)
+  })
 }
 
 function createMesh (cb, force) {
@@ -41625,25 +41643,43 @@ function createMesh (cb, force) {
     initial: pool.clone(mesh.pick(0)),
     eta: eta
   }, [], force).then(function(result) {
-    meshGeometry && meshGeometry.destroy()
-    nOverride = undefined
+    //nOverride = undefined
 
     mesh = coerce(result.mesh)
 
+    destroyGeometry()
     meshGeometry = drawMesh(v, mesh)
+    if (config.points) pointGeometry = drawPoints(v, mesh, 1)
     v.dirty = true
 
     cb && cb()
-  }).catch(function (error) { })
+  }).catch(function (error) {
+    //console.log(error)
+  })
 }
 
 createDatGUI(config, {
+  panels: {
+    airfoil: {
+      collapse: params.collapse.indexOf('airfoil') !== -1,
+      hide: params.hide.indexOf('airfoil') !== -1,
+    },
+    mesh: {
+      collapse: params.collapse.indexOf('mesh') !== -1,
+      hide: params.hide.indexOf('mesh') !== -1,
+    }
+  },
   handlers: {
     airfoil: {
-      change: function () {initializeMesh()},
+      change: function () {
+        initializeMesh(function () {
+          createMesh(null, true)
+        })
+      },
       finish: function () {
-        initializeMesh(null, true)
-        createMesh(null, true)
+        initializeMesh(function () {
+          createMesh(null, true)
+        })
       },
     },
     mesh: {
@@ -41658,10 +41694,10 @@ createDatGUI(config, {
 })
 
 var v = new Viewport ('canvas', {
-  xmin: -0.6,
-  xmax: 1.6,
-  ymin: 0.15 - 1,
-  ymax: 0.15 + 1,
+  xmin: config.xmin,
+  xmax: config.xmax,
+  ymin: config.ymin,
+  ymax: config.ymax,
   aspectRatio: 1,
   devicePixelRatio: window.devicePixelRatio,
   antialias: false,
@@ -41669,7 +41705,7 @@ var v = new Viewport ('canvas', {
 
 initializeMesh(createMesh)
 
-},{"./lib/config":49,"./lib/draw-mesh":50,"./lib/viewport":52,"./lib/work-dispatcher":53,"naca-four-digit-airfoil":27,"ndarray":40,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],49:[function(require,module,exports){
+},{"../lib/ndarray-coerce":48,"./lib/config":50,"./lib/defaults":51,"./lib/draw-mesh":52,"./lib/draw-points":53,"./lib/viewport":55,"./lib/work-dispatcher":56,"naca-four-digit-airfoil":27,"ndarray-scratch":36,"ndarray-show":37,"query-string":43,"shallow-equals":45,"three":46,"util-extend":47}],50:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -41682,56 +41718,85 @@ function createDatGUI (state, config) {
   }, config)
 
   var gui = new dat.GUI()
-  var airfoilConfig = gui.addFolder('Airfoil')
-  var thicknessController = airfoilConfig.add(state, 'thickness', 0, 0.5).step(0.01)
-  var camberMagController = airfoilConfig.add(state, 'camberMag', -0.5, 0.5).step(0.01)
-  var camberLocController = airfoilConfig.add(state, 'camberLoc', 0, 1).step(0.01)
-  airfoilConfig.open()
 
-  var meshConfig = gui.addFolder('Mesh')
-  var mController = meshConfig.add(state, 'm', 11, 151).step(1)
-  var nController = meshConfig.add(state, 'n', 3, 300).step(1)
-  var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.003)
-  var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
-  var stepIncController = meshConfig.add(state, 'stepInc', 0, 0.01)
-  var clusteringController = meshConfig.add(state, 'clustering', 1, 50)
-  meshConfig.open()
+  if (!config.panels.airfoil.hide) {
+    var airfoilConfig = gui.addFolder('Airfoil')
+    var thicknessController = airfoilConfig.add(state, 'thickness', 0, 0.5).step(0.01)
+    var camberMagController = airfoilConfig.add(state, 'camberMag', -0.5, 0.5).step(0.01)
+    var camberLocController = airfoilConfig.add(state, 'camberLoc', 0, 1).step(0.01)
+    var clusteringController = airfoilConfig.add(state, 'clustering', 1, 50)
+    if (!config.panels.airfoil.collapse) airfoilConfig.open()
 
-  var init = config.handlers.airfoil
-  if (init.change) {
-    thicknessController.onChange(init.change)
-    camberMagController.onChange(init.change)
-    camberLocController.onChange(init.change)
-    clusteringController.onChange(init.change)
-  }
-
-  if (init.finish) {
-    thicknessController.onFinishChange(init.finish)
-    camberMagController.onFinishChange(init.finish)
-    camberLocController.onFinishChange(init.finish)
-    clusteringController.onFinishChange(init.finish)
-  }
-
-  var mesh = config.handlers.mesh
-  if (mesh) {
-    if (mesh.change) {
-      mController.onChange(mesh.change)
-      nController.onChange(mesh.change)
-      diffusionController.onChange(mesh.change)
-      stepStartController.onChange(mesh.change)
-      stepIncController.onChange(mesh.change)
+    var init = config.handlers.airfoil
+    if (init.change) {
+      thicknessController.onChange(init.change)
+      camberMagController.onChange(init.change)
+      camberLocController.onChange(init.change)
+      clusteringController.onChange(init.change)
     }
-    if (mesh.finish) {
-      mController.onFinishChange(mesh.finish)
-      nController.onFinishChange(mesh.finish)
-      diffusionController.onFinishChange(mesh.finish)
-      stepStartController.onFinishChange(mesh.finish)
-      stepIncController.onFinishChange(mesh.finish)
+
+    if (init.finish) {
+      thicknessController.onFinishChange(init.finish)
+      camberMagController.onFinishChange(init.finish)
+      camberLocController.onFinishChange(init.finish)
+      clusteringController.onFinishChange(init.finish)
+    }
+  }
+
+  if (!config.panels.mesh.hide) {
+    var meshConfig = gui.addFolder('Mesh')
+    var mController = meshConfig.add(state, 'm', 11, 201).step(1)
+    var nController = meshConfig.add(state, 'n', 1, 300).step(1)
+    var diffusionController = meshConfig.add(state, 'diffusion', 0.00001, 0.005)
+    var stepStartController = meshConfig.add(state, 'stepStart', 0.0001, 0.02)
+    var stepIncController = meshConfig.add(state, 'stepInc', 0, 0.01)
+    if (!config.panels.mesh.collapse) meshConfig.open()
+
+
+    var mesh = config.handlers.mesh
+    if (mesh) {
+      if (mesh.change) {
+        mController.onChange(mesh.change)
+        nController.onChange(mesh.change)
+        diffusionController.onChange(mesh.change)
+        stepStartController.onChange(mesh.change)
+        stepIncController.onChange(mesh.change)
+      }
+      if (mesh.finish) {
+        mController.onFinishChange(mesh.finish)
+        nController.onFinishChange(mesh.finish)
+        diffusionController.onFinishChange(mesh.finish)
+        stepStartController.onFinishChange(mesh.finish)
+        stepIncController.onFinishChange(mesh.finish)
+      }
     }
   }
 }
 
-},{"util-extend":47}],50:[function(require,module,exports){
+},{"util-extend":47}],51:[function(require,module,exports){
+'use strict'
+
+module.exports = {
+  naca: null,
+  xmin: -0.6,
+  xmax: 1.6,
+  ymin: -1.0,
+  ymax: 1.0,
+  m: 101,
+  n: 50,
+  thickness: 0.12,
+  camberMag: 0.05,
+  camberLoc: 0.4,
+  stepInc: 0.001,
+  stepStart: 0.002,
+  diffusion: 0.002,
+  clustering: 20,
+  collapse: [],
+  hide: [],
+  points: true,
+}
+
+},{}],52:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -41784,7 +41849,38 @@ module.exports = function drawMesh (v, mesh, n) {
   }
 }
 
-},{"ndarray-show":37,"three":46}],51:[function(require,module,exports){
+},{"ndarray-show":37,"three":46}],53:[function(require,module,exports){
+'use strict'
+
+var show = require('ndarray-show')
+var three = require('three')
+
+module.exports = function drawPoints (v, mesh, n) {
+  var i, j, ind1, ind2, k1, k2
+  n = n || mesh.shape[0]
+  var m = mesh.shape[1]
+
+  var geometry = new three.BufferGeometry()
+  var data = mesh.data.subarray(0, 3 * n * m)
+  geometry.addAttribute('position', new three.BufferAttribute(data, 3))
+
+  var material = new three.PointsMaterial( { color: 0x0044ff, size: 8, sizeAttenuation: false} );
+  var mesh = new three.Points(geometry, material)
+  var node = new three.Object3D()
+  node.add(mesh)
+  v.scene.add(node)
+
+  return {
+    geometry: geometry,
+    destroy: function () {
+      geometry.dispose()
+      node.remove(mesh)
+      v.scene.remove(node)
+    }
+  }
+}
+
+},{"ndarray-show":37,"three":46}],54:[function(require,module,exports){
 /**
  * @author alteredq / http://alteredqualia.com/
  * @author mr.doob / http://mrdoob.com/
@@ -41866,7 +41962,7 @@ if ( typeof module === 'object' ) {
 
 }
 
-},{}],52:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 'use strict'
 
 var Detector = require('./threejs-detector.js')
@@ -42072,7 +42168,7 @@ Viewport.prototype.applyAspectRatio = function () {
   this.camera.top = yc + dy
 }
 
-},{"./threejs-detector.js":51,"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}],53:[function(require,module,exports){
+},{"./threejs-detector.js":54,"mouse-change":21,"mouse-event":23,"mouse-wheel":26,"three":46,"util-extend":47}],56:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -42162,4 +42258,4 @@ WorkDispatcher.prototype.start = function (task, data) {
   }.bind(this), false)
 }
 
-},{"event-emitter":5,"guid":20,"util-extend":47}]},{},[48]);
+},{"event-emitter":5,"guid":20,"util-extend":47}]},{},[49]);

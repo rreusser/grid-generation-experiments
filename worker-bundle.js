@@ -5947,6 +5947,22 @@ function extend(origin, add) {
 },{}],62:[function(require,module,exports){
 'use strict'
 
+var ndarray = require('ndarray')
+
+module.exports = coerce
+
+function coerce (data) {
+  return ndarray(
+    data.data,
+    data.shape,
+    data.stride,
+    data.offset
+  )
+}
+
+},{"ndarray":54}],63:[function(require,module,exports){
+'use strict'
+
 var EventLoop = require('./lib/event-loop')
 var WorkerState = require('./lib/worker-state')
 
@@ -5984,7 +6000,7 @@ var eventLoop = new EventLoop({
   }
 })
 
-},{"./lib/event-loop":65,"./lib/worker-state":73}],63:[function(require,module,exports){
+},{"./lib/event-loop":66,"./lib/worker-state":73}],64:[function(require,module,exports){
 'use strict'
 
 var stencil = require('finite-difference-stencil')
@@ -6028,7 +6044,7 @@ function computePeriodicDerivativeCoefficients (num, n, t, betaL, alpha, betaR, 
 }
 
 
-},{"finite-difference-stencil":22}],64:[function(require,module,exports){
+},{"finite-difference-stencil":22}],65:[function(require,module,exports){
 'use strict'
 
 var coeffs = require('./compute-periodic-derivative-coefficients')
@@ -6096,7 +6112,7 @@ Derivative.prototype.compute = function (xp, yp, x, ox, y, oy) {
   triper(n, this.betaL, this.alpha, this.betaR, xp, yp, this.w)
 }
 
-},{"./compute-periodic-derivative-coefficients":63,"./solve-periodic-tridiagonal":72}],65:[function(require,module,exports){
+},{"./compute-periodic-derivative-coefficients":64,"./solve-periodic-tridiagonal":72}],66:[function(require,module,exports){
 'use strict'
 
 module.exports = EventLoop
@@ -6137,7 +6153,7 @@ EventLoop.prototype.start = function () {
   }.bind(this))
 }
 
-},{"util-extend":61}],66:[function(require,module,exports){
+},{"util-extend":61}],67:[function(require,module,exports){
 'use strict'
 
 module.exports = hyperbolicGridDerivative
@@ -6159,7 +6175,7 @@ function hyperbolicGridDerivative (yp, y) {
 
 }
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 'use strict'
 
 var ops = require('ndarray-ops')
@@ -6197,7 +6213,7 @@ function incdec (out, t1, t2, n, r1, r2) {
   return out
 }
 
-},{"ndarray-ops":36,"ndarray-show":51}],68:[function(require,module,exports){
+},{"ndarray-ops":36,"ndarray-show":51}],69:[function(require,module,exports){
 'use strict'
 
 var arcLength = require('arc-length')
@@ -6264,7 +6280,7 @@ function initializeMesh (airfoilData, eta, xy, m, ratio1, ratio2) {
 }
 
 
-},{"./incdec":67,"arc-length":5,"bisect":6,"naca-four-digit-airfoil":28}],69:[function(require,module,exports){
+},{"./incdec":68,"arc-length":5,"bisect":6,"naca-four-digit-airfoil":28}],70:[function(require,module,exports){
 'use strict'
 
 var ode4 = require('ode-rk4')
@@ -6334,23 +6350,7 @@ Mesher.prototype.march = function () {
   }
 }
 
-},{"./derivative":64,"./hyperbolic-grid-derivative":66,"ode-euler":57,"ode-rk4":58,"ode45-cash-karp":59}],70:[function(require,module,exports){
-'use strict'
-
-var ndarray = require('ndarray')
-
-module.exports = coerce
-
-function coerce (data) {
-  return ndarray(
-    data.data,
-    data.shape,
-    data.stride,
-    data.offset
-  )
-}
-
-},{"ndarray":54}],71:[function(require,module,exports){
+},{"./derivative":65,"./hyperbolic-grid-derivative":67,"ode-euler":57,"ode-rk4":58,"ode45-cash-karp":59}],71:[function(require,module,exports){
 'use strict'
 
 module.exports = WorkerState
@@ -6472,7 +6472,7 @@ var initializeMesh = require('./initialize-mesh')
 var ShallowState = require('./shallow-state')
 var ops = require('ndarray-ops')
 var Mesher = require('./mesher')
-var coerce = require('./ndarray-coerce')
+var coerce = require('../../lib//ndarray-coerce')
 var linspace = require('ndarray-linspace')
 var prefixSum = require('ndarray-prefix-sum')
 var ndarray = require('ndarray')
@@ -6542,4 +6542,4 @@ WorkerState.prototype.createMesh = function (data) {
   this.needsMesh = false
 }
 
-},{"./initialize-mesh":68,"./mesher":69,"./ndarray-coerce":70,"./shallow-state":71,"ndarray":54,"ndarray-linspace":35,"ndarray-ops":36,"ndarray-prefix-sum":41,"ndarray-show":51}]},{},[62]);
+},{"../../lib//ndarray-coerce":62,"./initialize-mesh":69,"./mesher":70,"./shallow-state":71,"ndarray":54,"ndarray-linspace":35,"ndarray-ops":36,"ndarray-prefix-sum":41,"ndarray-show":51}]},{},[63]);
