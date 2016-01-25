@@ -6,6 +6,7 @@ var extend = require('util-extend')
 var mouseWheel = require('mouse-wheel')
 var mouse = require('mouse-event')
 var mouseChange = require('mouse-change')
+var touchPinch = require('touch-pinch')
 
 //window.THREE = three
 //require('three/examples/js/renderers/Projector')
@@ -79,6 +80,7 @@ function Viewport (id, options) {
 
   this.attachMouseWheel()
   this.attachMouseChange()
+  this.attachPinch()
 
   var render = function () {
     if (this.dirty) {
@@ -90,6 +92,26 @@ function Viewport (id, options) {
 
   render()
 }
+
+Viewport.prototype.attachPinch = function () {
+  this.canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault()
+  })
+  this.canvas.addEventListener('touchmove', function(e) {
+    console.log(this.pinch)
+    e.preventDefault()
+  }.bind(this))
+  this.pinch = touchPinch(this.canvas)
+  this.pinch.on('start', function (a,b) {
+    console.log(a,b)
+  }.bind(this)).on('change', function(dist, prevDist) {
+    this.zoom((dist - prevDist) * -0.1 )
+    console.log(this.pinch.fingers)
+  }.bind(this)).on('place', function(a, b) {
+    console.log(a, b)
+  }.bind(this))
+}
+
 Viewport.prototype.attachMouseChange = function () {
   var initialized = false
   mouseChange(this.canvas, function(buttons, i, j, mods) {

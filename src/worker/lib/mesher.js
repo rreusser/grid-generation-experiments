@@ -1,6 +1,7 @@
 'use strict'
 
 var ode4 = require('ode-rk4')
+var ode2 = require('ode-midpoint')
 var ode45 = require('ode45-cash-karp')
 var euler = require('ode-euler')
 var Derivative = require('./derivative')
@@ -29,7 +30,10 @@ function Mesher (eta, xi, mesh, diffusion) {
 
   this.deriv = hyperbolicGridDerivative.bind(this)
 
-  this.integrator = ode4(this.f, this.deriv, 0, 0.1)
+  this.euler = euler(this.f, this.deriv, 0, 0.1)
+  this.rk2 = ode2(this.f, this.deriv, 0, 0.1)
+  this.rk4 = ode4(this.f, this.deriv, 0, 0.1)
+  this.integrator = this.rk4
   //integrator.dtMinMag = 0.001
   //integrator.dtMaxMag = 0.1
   //integrator.tol = 1e-2

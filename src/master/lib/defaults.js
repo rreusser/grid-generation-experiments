@@ -18,4 +18,5 @@ module.exports = {
   collapse: [],
   hide: [],
   points: true,
+  integrator: 'rk4'
 }

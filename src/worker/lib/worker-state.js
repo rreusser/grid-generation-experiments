@@ -30,6 +30,7 @@ function WorkerState () {
     if (changes.m ||
         changes.n ||
         changes.diffusion ||
+        changes.integrator ||
         changes.stepStart ||
         changes.stepInc ||
         changes.clustering) {
@@ -72,6 +73,7 @@ WorkerState.prototype.createMesh = function (data) {
   }
 
   this.mesher.diffusion = this.state.diffusion
+  this.mesher.integrator = this.mesher[this.state.integrator]
   this.mesher.march()
 
   this.needsMesh = false

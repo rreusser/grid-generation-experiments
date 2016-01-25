@@ -37,6 +37,8 @@ for (var i = 0; i < booleanParams.length; i++) {
   config[param] = params[param] !== 'false'
 }
 
+config.integrator = params.integrator
+
 if (naca.isValid(params.naca)) {
   var airfoil = naca.parse(params.naca)
   config.thickness = airfoil.t
