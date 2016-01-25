@@ -42096,7 +42096,7 @@ for (var i = 0; i < booleanParams.length; i++) {
   config[param] = params[param] !== 'false'
 }
 
-if (Modernizr.touchEvents) {
+if (Modernizr.touchevents) {
   params['collapse'] = ['mesh', 'airfoil']
 }
 
@@ -42202,7 +42202,8 @@ createDatGUI(config, {
         createMesh(null, true)
       },
     },
-  }
+  },
+  close: true
 })
 
 var v = new Viewport ('canvas', {
@@ -42211,7 +42212,7 @@ var v = new Viewport ('canvas', {
   ymin: config.ymin,
   ymax: config.ymax,
   aspectRatio: 1,
-  devicePixelRatio: window.devicePixelRatio,
+  devicePixelRatio: window.devicePixelRatio * 2,
   antialias: false,
 })
 
@@ -42286,6 +42287,11 @@ function createDatGUI (state, config) {
         integrationController.onFinishChange(mesh.change)
       }
     }
+  }
+
+  if (config.close) {
+    console.log(gui)
+    gui.close()
   }
 }
 
@@ -42591,8 +42597,6 @@ Viewport.prototype.attachPinch = function () {
     this.mouse.j = pos[1]
     this.mouse.x = this.camera.left + this.mouse.i * this.xscale
     this.mouse.y = this.camera.top + this.mouse.j * this.yscale
-
-    console.log(pos)
   }.bind(this))
 
   this.canvas.addEventListener('touchmove', function(ev) {
