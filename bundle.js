@@ -42089,7 +42089,7 @@ for (var i = 0; i < numericalParams.length; i++) {
   config[param] = Number(params[param])
 }
 
-var booleanParams = ['points']
+var booleanParams = ['points', 'collapseConfig']
 
 for (var i = 0; i < booleanParams.length; i++) {
   var param = booleanParams[i]
@@ -42203,7 +42203,7 @@ createDatGUI(config, {
       },
     },
   },
-  close: true
+  close: config.collapseConfig
 })
 
 var v = new Viewport ('canvas', {
@@ -42315,7 +42315,8 @@ module.exports = {
   collapse: [],
   hide: [],
   points: true,
-  integrator: 'rk4'
+  integrator: 'rk4',
+  collapseConfig: false
 }
 
 },{}],58:[function(require,module,exports){
