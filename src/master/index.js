@@ -50,6 +50,53 @@ if (naca.isValid(params.naca)) {
   config.camberLoc = airfoil.p
 }
 
+createDatGUI(config, {
+  folders: {
+    airfoil: {
+      name: 'Airfoil',
+      variables: {
+        thickness:    { range: [0, 0.5],      step: 0.01 },
+        camber:       { range: [-0.5, 0.5],   step: 0.01 },
+        camberLoc:    { range: [0, 1],        step: 0.01 },
+        clustering:   { range: [1, 50],       step: 1    },
+        m:            { range: [11, 201],     step: 1    },
+      },
+      collapse: params.collapse.indexOf('airfoil') !== -1,
+      hide: params.hide.indexOf('airfoil') !== -1,
+      onChange: function () {
+        initializeMesh(function () {
+          createMesh(null, true)
+        })
+      },
+      onFinishChange: function () {
+        createMesh()
+      },
+    },
+    mesh: {
+      name: 'Mesh',
+      variables: {
+        n: { range: [1, 300], step: 1},
+        diffusion: { range: [0.00001, 0.005] },
+        pow: { range: [0.5, 1] },
+        stepStart: { range: [0.0001, 0.02] },
+        stepInc: { range: [0, 0.01] },
+        integrator: { values: {'Euler': 'euler', 'Midpoint': 'rk2', 'Runge-Kutta 4': 'rk4'} },
+      },
+      collapse: params.collapse.indexOf('mesh') !== -1,
+      hide: params.hide.indexOf('mesh') !== -1,
+      onChange: function () {
+        initializeMesh(function () {
+          createMesh(null, true)
+        })
+      },
+      onFinishChange: function () {
+        createMesh()
+      },
+    }
+  },
+  close: config.collapseConfig
+})
+
 var mesh, eta, xi
 var meshGeometry
 var pointGeometry
@@ -110,42 +157,6 @@ function createMesh (cb, force) {
     //console.log(error)
   })
 }
-
-createDatGUI(config, {
-  panels: {
-    airfoil: {
-      collapse: params.collapse.indexOf('airfoil') !== -1,
-      hide: params.hide.indexOf('airfoil') !== -1,
-    },
-    mesh: {
-      collapse: params.collapse.indexOf('mesh') !== -1,
-      hide: params.hide.indexOf('mesh') !== -1,
-    }
-  },
-  handlers: {
-    airfoil: {
-      change: function () {
-        initializeMesh(function () {
-          createMesh(null, true)
-        })
-      },
-      finish: function () {
-        initializeMesh(function () {
-          createMesh(null, true)
-        })
-      },
-    },
-    mesh: {
-      change: function () {
-        createMesh()
-      },
-      finish: function () {
-        createMesh(null, true)
-      },
-    },
-  },
-  close: config.collapseConfig
-})
 
 var v = new Viewport ('canvas', {
   xmin: config.xmin,
