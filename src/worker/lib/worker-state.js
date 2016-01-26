@@ -21,7 +21,7 @@ function WorkerState () {
     if (changes.m ||
         changes.n ||
         changes.thickness ||
-        changes.camberMag ||
+        changes.camber ||
         changes.camberLoc ||
         changes.clustering) {
 
@@ -30,6 +30,7 @@ function WorkerState () {
     if (changes.m ||
         changes.n ||
         changes.diffusion ||
+        changes.pow ||
         changes.integrator ||
         changes.stepStart ||
         changes.stepInc ||
@@ -50,13 +51,13 @@ WorkerState.prototype.initialize = function () {
 
   initializeMesh({
     t: this.state.thickness,
-    m: this.state.camberMag,
+    m: this.state.camber,
     p: this.state.camberLoc,
   }, this.eta, this.mesh.pick(0), m, this.state.clustering, this.state.clustering)
 
   this.xi = ndarray(new Float32Array(n), [n])
 
-  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion)
+  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion, this.state.pow)
 
   this.needsInitialization = false
 }
@@ -73,6 +74,7 @@ WorkerState.prototype.createMesh = function (data) {
   }
 
   this.mesher.diffusion = this.state.diffusion
+  this.mesher.pow = this.state.pow
   this.mesher.integrator = this.mesher[this.state.integrator]
   this.mesher.march()
 

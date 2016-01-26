@@ -19,9 +19,9 @@ var defaults = require('./lib/defaults')
 var params = extend(defaults, queryString.parse(location.search))
 
 var numericalParams = [
-  'thickness', 'camberMag', 'camberLoc', 'm', 'n',
+  'thickness', 'camber', 'camberLoc', 'm', 'n',
   'diffusion', 'stepStart', 'stepInc', 'clustering',
-  'xmin', 'xmax', 'ymin', 'ymax'
+  'xmin', 'xmax', 'ymin', 'ymax', 'pow'
 ]
 
 var config = {}
@@ -30,7 +30,7 @@ for (var i = 0; i < numericalParams.length; i++) {
   config[param] = Number(params[param])
 }
 
-var booleanParams = ['points']
+var booleanParams = ['points', 'collapseConfig']
 
 for (var i = 0; i < booleanParams.length; i++) {
   var param = booleanParams[i]
@@ -46,7 +46,7 @@ config.integrator = params.integrator
 if (naca.isValid(params.naca)) {
   var airfoil = naca.parse(params.naca)
   config.thickness = airfoil.t
-  config.camberMag = airfoil.m
+  config.camber = airfoil.m
   config.camberLoc = airfoil.p
 }
 
@@ -144,7 +144,7 @@ createDatGUI(config, {
       },
     },
   },
-  close: true
+  close: config.collapseConfig
 })
 
 var v = new Viewport ('canvas', {

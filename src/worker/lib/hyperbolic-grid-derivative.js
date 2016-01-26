@@ -12,7 +12,7 @@ function hyperbolicGridDerivative (yp, y) {
     dx = this.dxdeta[i]
     dy = this.dydeta[i]
     var ds2 = dx * dx + dy * dy
-    var coeff =  - 1 / ds2
+    var coeff =  - 1 / Math.pow(ds2, this.pow)
     yp[i         ] = - coeff * dy + this.d2xdeta2[i] * this.diffusion
     yp[i + this.m] =   coeff * dx + this.d2ydeta2[i] * this.diffusion
   }
