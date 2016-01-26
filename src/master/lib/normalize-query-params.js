@@ -4,7 +4,6 @@ var queryString = require('query-string')
 
 module.exports = normalizeQueryParams
 
-
 function cast (data, type) {
   var typeName, nestedType
   if (Array.isArray(type)) {
