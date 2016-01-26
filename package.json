@@ -42,6 +42,7 @@
     "solve-periodic-tridiagonal": "^1.0.0",
     "three": "^0.73.2",
     "touch-pinch": "^1.0.0",
+    "type-name": "^2.0.0",
     "util-extend": "^1.0.3"
   },
   "devDependencies": {

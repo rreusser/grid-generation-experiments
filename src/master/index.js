@@ -3,52 +3,18 @@
 
 var three = require('three')
 var show = require('ndarray-show')
-var queryString = require('query-string')
 var pool = require('ndarray-scratch')
-var extend = require('util-extend')
 var WorkDispatcher = require('./lib/work-dispatcher')
 var Viewport = require('./lib/viewport')
-var naca = require('naca-four-digit-airfoil')
-var createDatGUI = require('./lib/config')
+var createDatGUI = require('./lib/create-dat-gui')
 var drawMesh = require('./lib/draw-mesh')
 var drawPoints = require('./lib/draw-points')
 var equals = require('shallow-equals')
 var coerce = require('../lib/ndarray-coerce')
-var defaults = require('./lib/defaults')
 
-var params = extend(defaults, queryString.parse(location.search))
+var config = require('./lib/config')
 
-var numericalParams = [
-  'thickness', 'camber', 'camberLoc', 'm', 'n',
-  'diffusion', 'stepStart', 'stepInc', 'clustering',
-  'xmin', 'xmax', 'ymin', 'ymax', 'pow'
-]
-
-var config = {}
-for (var i = 0; i < numericalParams.length; i++) {
-  var param = numericalParams[i]
-  config[param] = Number(params[param])
-}
-
-var booleanParams = ['points', 'collapseConfig']
-
-for (var i = 0; i < booleanParams.length; i++) {
-  var param = booleanParams[i]
-  config[param] = params[param] !== 'false'
-}
-
-if (Modernizr.touchevents) {
-  params['collapse'] = ['mesh', 'airfoil']
-}
-
-config.integrator = params.integrator
-
-if (naca.isValid(params.naca)) {
-  var airfoil = naca.parse(params.naca)
-  config.thickness = airfoil.t
-  config.camber = airfoil.m
-  config.camberLoc = airfoil.p
-}
+console.log('config =', config)
 
 createDatGUI(config, {
   folders: {
@@ -61,8 +27,8 @@ createDatGUI(config, {
         clustering:   { range: [1, 50],       step: 1    },
         m:            { range: [11, 201],     step: 1    },
       },
-      collapse: params.collapse.indexOf('airfoil') !== -1,
-      hide: params.hide.indexOf('airfoil') !== -1,
+      collapse: config.collapsedFolders.indexOf('airfoil') !== -1,
+      hide: config.hide.indexOf('airfoil') !== -1,
       onChange: function () {
         initializeMesh(function () {
           createMesh(null, true)
@@ -75,15 +41,21 @@ createDatGUI(config, {
     mesh: {
       name: 'Mesh',
       variables: {
-        n: { range: [1, 300], step: 1},
-        diffusion: { range: [0.00001, 0.005] },
-        pow: { range: [0.5, 1] },
-        stepStart: { range: [0.0001, 0.02] },
-        stepInc: { range: [0, 0.01] },
-        integrator: { values: {'Euler': 'euler', 'Midpoint': 'rk2', 'Runge-Kutta 4': 'rk4'} },
+        n:            { range: [1, 300], step: 1},
+        diffusion:    { range: [0.00001, 0.005] },
+        pow:          { range: [0.5, 1] },
+        stepStart:    { range: [0.0001, 0.02] },
+        stepInc:      { range: [0, 0.01] },
+        integrator: {
+          values: {
+            'Euler': 'euler',
+            'Midpoint': 'rk2',
+            'Runge-Kutta 4': 'rk4'
+          }
+        },
       },
-      collapse: params.collapse.indexOf('mesh') !== -1,
-      hide: params.hide.indexOf('mesh') !== -1,
+      collapse: config.collapsedFolders.indexOf('mesh') !== -1,
+      hide: config.hide.indexOf('mesh') !== -1,
       onChange: function () {
         initializeMesh(function () {
           createMesh(null, true)

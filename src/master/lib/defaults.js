@@ -16,7 +16,7 @@ module.exports = {
   diffusion: 0.002,
   pow: 1.0,
   clustering: 20,
-  collapse: [],
+  collapsedFolders: [],
   hide: [],
   points: true,
   integrator: 'rk4',
