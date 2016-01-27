@@ -38659,6 +38659,7 @@ module.exports = {
   collapseConfig: Modernizr.touchevents,
   devicePixelRatio: window.devicePixelRatio,
   closeButton: true,
+  mouseWheel: true
 }
 
 },{}],43:[function(require,module,exports){
@@ -38698,6 +38699,7 @@ extend(config, normalizeQueryParams(location.search, {
   devicePixelRatio: 'Number',
   configSet: 'Integer',
   closeButton: 'Boolean',
+  mouseWheel: 'Boolean',
 }))
 
 if (naca.isValid(config.naca)) {
@@ -38739,13 +38741,12 @@ function initialize () {
     aspectRatio: 1,
     devicePixelRatio: devicePixelRatio,
     antialias: state.antialiasing,
+    mouseWheel: state.mouseWheel,
   })
 
-  window.viewport = viewport
+  var simulation = new SimulationController('worker-bundle.min.js', state, viewport)
 
-  var simulation = new SimulationController('worker-bundle.js', state, viewport)
-
-  window.gui = createDatGui(state, datGuiConfig(state, simulation))
+  createDatGui(state, datGuiConfig(state, simulation))
 
   simulation.initializeMesh(
     simulation.createMesh
@@ -39231,7 +39232,9 @@ function Viewport (id, options) {
   this.setBounds(opts.xmin, opts.xmax, opts.ymin, opts.ymax)
   this.applyAspectRatio()
 
-  this.attachMouseWheel()
+  if (opts.mouseWheel) {
+    this.attachMouseWheel()
+  }
   this.attachMouseChange()
   this.attachPinch()
 
@@ -39332,6 +39335,7 @@ Viewport.prototype.attachPinch = function () {
 
 Viewport.prototype.attachMouseChange = function () {
   var initialized = false
+  var pButtons
   mouseChange(this.canvas, function(buttons, i, j, mods) {
     this.mouse.i = i
     this.mouse.j = j
@@ -39346,9 +39350,22 @@ Viewport.prototype.attachMouseChange = function () {
     this.mouse.control = mods.control
     this.mouse.meta = mods.meta
 
-    if (buttons === 1 && initialized) {
-      this.pan(dx, dy)
+    // Initial mouse down event:
+    if (buttons === 1 && pButtons === 0) {
+      this.mouse.x0 = this.mouse.x
+      this.mouse.y0 = this.mouse.y
     }
+
+    if (buttons === 1 && initialized) {
+      if (this.mouse.alt || this.mouse.shift || this.mouse.control || this.mouse.meta) {
+        var fac = dy * 500 / (this.camera.top - this.camera.bottom)
+        this.zoom(Math.exp(fac * this.zoomSpeed), this.mouse.x0, this.mouse.y0)
+      } else {
+        this.pan(dx, dy)
+      }
+    }
+
+    pButtons = buttons
     initialized = true
   }.bind(this))
 }
@@ -39367,17 +39384,19 @@ Viewport.prototype.pan = function(dx, dy) {
   )
 }
 
-Viewport.prototype.zoom = function (amount) {
-  var dxR = this.camera.right - this.mouse.x
-  var dxL = this.camera.left - this.mouse.x
-  var dxB = this.camera.bottom - this.mouse.y
-  var dxT = this.camera.top - this.mouse.y
+Viewport.prototype.zoom = function (amount, x0, y0) {
+  if (x0 === undefined) x0 = this.mouse.x
+  if (y0 === undefined) y0 = this.mouse.y
+  var dxR = this.camera.right - x0
+  var dxL = this.camera.left - x0
+  var dxB = this.camera.bottom - y0
+  var dxT = this.camera.top - y0
 
   this.setBounds(
-    this.mouse.x + dxL * amount,
-    this.mouse.x + dxR * amount,
-    this.mouse.y + dxB * amount,
-    this.mouse.y + dxT * amount
+    x0 + dxL * amount,
+    x0 + dxR * amount,
+    y0 + dxB * amount,
+    y0 + dxT * amount
   )
 }
 
