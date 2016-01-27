@@ -4,6 +4,64 @@ var extend = require('util-extend')
 
 module.exports = createDatGUI
 
+
+function createVariable (gui, state, name, definition, onChange, onFinishChange) {
+  var i, controller
+
+  // A numerical variable with a range:
+  if (definition.range) {
+    controller = gui.add(state, name, definition.range[0], definition.range[1])
+
+    // Set steps, if provided:
+    if (definition.step) {
+      controller.step(definition.step)
+    }
+  }
+
+  // A definition with string values:
+  if (definition.values) {
+    controller = gui.add(state, name, definition.values)
+  }
+
+  onChange.push(definition.onChange)
+  onFinishChange.push(definition.onFinishChange)
+
+  for (i = 0; i < onChange.length; i++) {
+    if (onChange[i]) {
+      controller.onChange(onChange[i])
+    }
+  }
+
+  for (i = 0; i < onFinishChange.length; i++) {
+    if (onFinishChange[i]) {
+      controller.onFinishChange(onFinishChange[i])
+    }
+  }
+}
+
+function createVariables (gui, state, items, onChange, onFinishChange) {
+  var i, key
+  var keys = Object.keys(items.variables)
+  for (i = 0; i < keys.length; i++) {
+    key = keys[i]
+    createVariable(gui, state, key, items.variables[key],
+      [onChange, items.onChange],
+      [onFinishChange, items.onFinishChange]
+    )
+  }
+}
+
+function createFolder (gui, state, item, onChange, onFinishChange) {
+  var folder = gui.addFolder(item.folder)
+  if (item.open) {
+    folder.open()
+  }
+  if (item.close) {
+    folder.close()
+  }
+  createVariables(folder, state, item, onChange, onFinishChange)
+}
+
 function createDatGUI (state, config) {
   var i, j, folder, folderKeys, gui, controllers
   var variable, guiFolder, variableKeys, folderKey
@@ -15,55 +73,25 @@ function createDatGUI (state, config) {
   gui = new dat.GUI()
 
   controllers = {}
-  folderKeys = Object.keys(config.folders)
 
-  for (i = 0; i < folderKeys.length; i++) {
-    folderKey = folderKeys[i]
-    folder = config.folders[folderKey]
-
-    if (!folder.variables || folder.hide) continue
-
-    guiFolder = gui.addFolder(folder.name)
-
-    variableKeys = Object.keys(folder.variables)
-
-    for (j = 0; j < variableKeys.length; j++) {
-      variableKey = variableKeys[j]
-      variable = folder.variables[variableKey]
-
-      // A numerical variable with a range:
-      if (variable.range) {
-        guiController = guiFolder.add(state, variableKey, variable.range[0], variable.range[1])
-
-        // Set steps, if provided:
-        if (variable.step) {
-          guiController.step(variable.step)
-        }
-      }
-
-      // A variable with string values:
-      if (variable.values) {
-        guiController = guiFolder.add(state, variableKey, variable.values)
-      }
-
-      // Assign a folder-level callback for changes:
-      if (folder.onChange) {
-        guiController.onChange(folder.onChange)
-      }
-
-      // A folder-level callback for changes finished:
-      if (folder.onFinishChange) {
-        guiController.onChange(folder.onFinishChange)
-      }
-
-      if (!folder.collapse) {
-        guiFolder.open()
-      }
-
+  for (i = 0; i < config.items.length; i++) {
+    var item = config.items[i]
+    if (item.hide) continue
+    if (item.folder) {
+      createFolder(gui, state, item, config.onChange, config.onFinishChange)
+    } else {
+      createVariables(gui, state, item, config.onChange, config.onFinishChange)
     }
   }
 
-  if (config.close) {
+  if (config.collapse) {
     gui.close()
   }
+
+  console.log(state)
+  if (state.closeButton === false) {
+    gui.__closeButton.style.display = 'none'
+  }
+
+  return gui
 }

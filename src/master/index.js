@@ -33,7 +33,7 @@ function initialize () {
 
   var simulation = new SimulationController('worker-bundle.js', state, viewport)
 
-  createDatGui(state, datGuiConfig(state, simulation))
+  window.gui = createDatGui(state, datGuiConfig(state, simulation))
 
   simulation.initializeMesh(
     simulation.createMesh

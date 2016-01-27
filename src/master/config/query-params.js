@@ -10,6 +10,8 @@ var normalizeQueryParams = require('../lib/normalize-query-params')
 var config = extend({}, defaults)
 
 extend(config, normalizeQueryParams(location.search, {
+  open: ['String'],
+  close: ['String'],
   hide: ['String'],
   thickness: 'Number',
   camber: 'Number',
@@ -24,12 +26,14 @@ extend(config, normalizeQueryParams(location.search, {
   xmax: 'Number',
   ymin: 'Number',
   ymax: 'Number',
-  pow: 'Number',
+  power: 'Number',
   points: 'Boolean',
   collapseConfig: 'Boolean',
   integrator: 'String',
   antialiasing: 'Boolean',
   devicePixelRatio: 'Number',
+  configSet: 'Integer',
+  closeButton: 'Boolean',
 }))
 
 if (naca.isValid(config.naca)) {
