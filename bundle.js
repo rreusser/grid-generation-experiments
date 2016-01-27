@@ -38637,7 +38637,7 @@ module.exports = {
   points: true,
   integrator: 'rk4',
   collapseConfig: Modernizr.touchevents,
-  devicePixelRatio: window.devicePixelRatio, // * (Modernizr.touchevents ? 2 : 1),
+  devicePixelRatio: window.devicePixelRatio,
 }
 
 },{}],43:[function(require,module,exports){
@@ -38699,13 +38699,20 @@ window.onload = function () {
 }
 
 function initialize () {
+  var devicePixelRatio = window.devicePixelRatio
+
+  if (window.innerWidth < 400 && !state.antialiasing) {
+    // Fake anti-aliasing for small screens:
+    devicePixelRatio *= 2
+  }
+
   var viewport = new Viewport ('canvas', {
     xmin: state.xmin,
     xmax: state.xmax,
     ymin: state.ymin,
     ymax: state.ymax,
     aspectRatio: 1,
-    devicePixelRatio: state.devicePixelRatio,
+    devicePixelRatio: devicePixelRatio,
     antialias: state.antialiasing,
   })
 
