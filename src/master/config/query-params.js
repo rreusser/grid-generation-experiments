@@ -34,6 +34,7 @@ extend(config, normalizeQueryParams(location.search, {
   devicePixelRatio: 'Number',
   configSet: 'Integer',
   closeButton: 'Boolean',
+  mouseWheel: 'Boolean',
 }))
 
 if (naca.isValid(config.naca)) {

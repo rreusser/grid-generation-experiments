@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "watchify ./src/master/index.js -o ./dist/bundle.js",
     "watch-worker": "watchify ./src/worker/index.js -o ./dist/worker-bundle.js",
-    "build-example": "browserify src/master/index.js -o dist/bundle.js && cp src/*.html dist && browserify src/worker/index.js -o dist/worker-bundle.js && cp lib/*.js dist",
+    "build-example": "browserify src/master/index.js -o dist/bundle.js && cp src/*.html dist && browserify src/worker/index.js -o dist/worker-bundle.js && cp lib/*.js dist && npm run uglify",
+    "uglify": "uglifyjs --compress --mangle --screw-ie8 dist/bundle.js -o dist/bundle.min.js && uglifyjs --compress --mangle --screw-ie8 dist/worker-bundle.js -o dist/worker-bundle.min.js",
     "deploy-example": "gh-pages -d dist"
   },
   "author": "",
@@ -19,7 +20,6 @@
     "event-emitter": "^0.3.4",
     "finite-difference-stencil": "^1.0.2",
     "gh-pages": "^0.8.0",
-    "gl-plot2d": "^1.1.6",
     "guid": "0.0.12",
     "mouse-change": "^1.2.1",
     "mouse-event": "^1.0.5",
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "gh-pages": "^0.8.0",
+    "uglify-js": "^2.6.1",
     "watchify": "^3.7.0"
   }
 }

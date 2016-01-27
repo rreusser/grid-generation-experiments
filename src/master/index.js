@@ -27,13 +27,12 @@ function initialize () {
     aspectRatio: 1,
     devicePixelRatio: devicePixelRatio,
     antialias: state.antialiasing,
+    mouseWheel: state.mouseWheel,
   })
 
-  window.viewport = viewport
+  var simulation = new SimulationController('worker-bundle.min.js', state, viewport)
 
-  var simulation = new SimulationController('worker-bundle.js', state, viewport)
-
-  window.gui = createDatGui(state, datGuiConfig(state, simulation))
+  createDatGui(state, datGuiConfig(state, simulation))
 
   simulation.initializeMesh(
     simulation.createMesh

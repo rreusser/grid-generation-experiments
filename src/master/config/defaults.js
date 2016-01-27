@@ -24,4 +24,5 @@ module.exports = {
   collapseConfig: Modernizr.touchevents,
   devicePixelRatio: window.devicePixelRatio,
   closeButton: true,
+  mouseWheel: true
 }
