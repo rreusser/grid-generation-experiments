@@ -5,7 +5,7 @@ var queryString = require('query-string')
 var extend = require('util-extend')
 var defaults = require('./defaults')
 var naca = require('naca-four-digit-airfoil')
-var normalizeQueryParams = require('./normalize-query-params')
+var normalizeQueryParams = require('../lib/normalize-query-params')
 
 var config = extend({}, defaults)
 

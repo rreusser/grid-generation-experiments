@@ -20,8 +20,6 @@ function WorkDispatcher (workerCodePath, config) {
   this.worker = new Worker(workerCodePath)
   this.worker.postMessage = this.worker.webkitPostMessage || this.worker.postMessage;
 
-  this.start()
-
   //this.on('request', this.request)
 
   this.promises = {}

@@ -3,10 +3,9 @@
 var show = require('ndarray-show')
 var three = require('three')
 
-module.exports = function drawMesh (v, mesh, n) {
-
+module.exports = function drawMesh (v, mesh, options) {
   var i, j, ind1, ind2, k1, k2
-  n = n || mesh.shape[0]
+  var n = mesh.shape[0]
   var m = mesh.shape[1]
 
   var indices = new Uint16Array(n * m * 2 + m * (n - 1) * 2)
