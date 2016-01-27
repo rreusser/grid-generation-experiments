@@ -38701,7 +38701,7 @@ window.onload = function () {
 function initialize () {
   var devicePixelRatio = window.devicePixelRatio
 
-  if (window.innerWidth < 400 && !state.antialiasing) {
+  if (window.innerWidth <= 400 && !state.antialiasing) {
     // Fake anti-aliasing for small screens:
     devicePixelRatio *= 2
   }
@@ -38715,6 +38715,8 @@ function initialize () {
     devicePixelRatio: devicePixelRatio,
     antialias: state.antialiasing,
   })
+
+  window.viewport = viewport
 
   var simulation = new SimulationController('worker-bundle.js', state, viewport)
 
@@ -38854,7 +38856,7 @@ module.exports = function drawMesh (v, mesh, options) {
 var show = require('ndarray-show')
 var three = require('three')
 
-module.exports = function drawPoints (v, mesh, n) {
+module.exports = function drawPoints (viewport, mesh, n) {
   var i, j, ind1, ind2, k1, k2
   n = n || mesh.shape[0]
   var m = mesh.shape[1]
@@ -38863,18 +38865,18 @@ module.exports = function drawPoints (v, mesh, n) {
   var data = mesh.data.subarray(0, 3 * n * m)
   geometry.addAttribute('position', new three.BufferAttribute(data, 3))
 
-  var material = new three.PointsMaterial( { color: 0x0044ff, size: 8, sizeAttenuation: false} );
+  var material = new three.PointsMaterial( { color: 0x0044ff, size: 4 * viewport.devicePixelRatio, sizeAttenuation: false} );
   var mesh = new three.Points(geometry, material)
   var node = new three.Object3D()
   node.add(mesh)
-  v.scene.add(node)
+  viewport.scene.add(node)
 
   return {
     geometry: geometry,
     destroy: function () {
       geometry.dispose()
       node.remove(mesh)
-      v.scene.remove(node)
+      viewport.scene.remove(node)
     }
   }
 }
@@ -39129,6 +39131,7 @@ function Viewport (id, options) {
   this.getSize = opts.getSize
   this.zoomSpeed = opts.zoomSpeed
   this.canvas = document.getElementById(id)
+  this.devicePixelRatio = opts.devicePixelRatio
 
   var onResize = function () {
     this.resize()
@@ -39165,7 +39168,7 @@ function Viewport (id, options) {
   }
 
   this.renderer.setClearColor(new three.Color(0xffffff))
-  this.renderer.setPixelRatio(opts.devicePixelRatio)
+  this.renderer.setPixelRatio(this.devicePixelRatio)
   this.renderer.setSize(this.width, this.height)
 
   this.scene = new three.Scene()
