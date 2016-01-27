@@ -38692,26 +38692,31 @@ var Viewport = require('./lib/viewport')
 var SimulationController = require('./lib/simulation-controller')
 var createDatGui = require('./lib/create-dat-gui')
 var datGuiConfig = require('./config/dat-gui-config')
-
 var state = require('./config/query-params')
 
-var viewport = new Viewport ('canvas', {
-  xmin: state.xmin,
-  xmax: state.xmax,
-  ymin: state.ymin,
-  ymax: state.ymax,
-  aspectRatio: 1,
-  devicePixelRatio: state.devicePixelRatio,
-  antialias: state.antialiasing,
-})
+window.onload = function () {
+  setTimeout(initialize, 1)
+}
 
-var simulation = new SimulationController('worker-bundle.js', state, viewport)
+function initialize () {
+  var viewport = new Viewport ('canvas', {
+    xmin: state.xmin,
+    xmax: state.xmax,
+    ymin: state.ymin,
+    ymax: state.ymax,
+    aspectRatio: 1,
+    devicePixelRatio: state.devicePixelRatio,
+    antialias: state.antialiasing,
+  })
 
-createDatGui(state, datGuiConfig(state, simulation))
+  var simulation = new SimulationController('worker-bundle.js', state, viewport)
 
-simulation.initializeMesh(
-  simulation.createMesh
-)
+  createDatGui(state, datGuiConfig(state, simulation))
+
+  simulation.initializeMesh(
+    simulation.createMesh
+  )
+}
 
 },{"./config/dat-gui-config":41,"./config/query-params":43,"./lib/create-dat-gui":45,"./lib/simulation-controller":49,"./lib/viewport":51}],45:[function(require,module,exports){
 'use strict'
@@ -39118,9 +39123,13 @@ function Viewport (id, options) {
   this.zoomSpeed = opts.zoomSpeed
   this.canvas = document.getElementById(id)
 
-  window.addEventListener('resize', function() {
+  var onResize = function () {
     this.resize()
     this.render()
+  }.bind(this)
+
+  window.addEventListener('resize', function() {
+    setTimeout(onResize, 1)
   }.bind(this), false)
 
   if (Detector.webgl) {
