@@ -36,15 +36,16 @@ function cast (data, type) {
     } else {
       return [cast(data, nestedType)]
     }
-  default:
   case "String":
     return String(data)
     break;
+  default:
+    return null
   }
 }
 
 function normalizeQueryParams (str, typeDefs) {
-  var i, params, output, keys, key
+  var i, params, output, keys, key, value
 
   output = {}
   params = queryString.parse(str)
@@ -52,7 +53,10 @@ function normalizeQueryParams (str, typeDefs) {
 
   for (i = 0; i < keys.length; i++) {
     key = keys[i]
-    output[key] = cast(params[key], typeDefs[key])
+    value = cast(params[key], typeDefs[key])
+    if (value !== null) {
+      output[key] = value
+    }
   }
 
   return output

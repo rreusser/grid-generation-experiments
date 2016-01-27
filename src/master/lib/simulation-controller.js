@@ -7,7 +7,7 @@ var coerce = require('../../lib/ndarray-coerce')
 
 module.exports = SimulationController
 
-function SimulationController (code, config, viewport) {
+function SimulationController (code, config, state, viewport) {
   var dispatcher = new WorkDispatcher('worker-bundle.js')
 
   var mesh, eta, xi
@@ -24,7 +24,7 @@ function SimulationController (code, config, viewport) {
 
   this.initializeMesh = function initializeMesh (cb, force) {
     dispatcher.request('initializeGrid', {
-      params: config,
+      params: state,
     }, [], force).then(function(result) {
 
       mesh = coerce(result.mesh)
@@ -42,7 +42,7 @@ function SimulationController (code, config, viewport) {
     if (!mesh) return
 
     dispatcher.request('createMesh', {
-      params: config,
+      params: state,
       initial: mesh.pick(0),
       eta: eta
     }, [], force).then(function(result) {
