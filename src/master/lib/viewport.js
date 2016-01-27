@@ -37,10 +37,15 @@ function Viewport (id, options) {
   this.getSize = opts.getSize
   this.zoomSpeed = opts.zoomSpeed
   this.canvas = document.getElementById(id)
+  this.devicePixelRatio = opts.devicePixelRatio
 
-  window.addEventListener('resize', function() {
+  var onResize = function () {
     this.resize()
     this.render()
+  }.bind(this)
+
+  window.addEventListener('resize', function() {
+    setTimeout(onResize, 1)
   }.bind(this), false)
 
   if (Detector.webgl) {
@@ -69,7 +74,7 @@ function Viewport (id, options) {
   }
 
   this.renderer.setClearColor(new three.Color(0xffffff))
-  this.renderer.setPixelRatio(opts.devicePixelRatio)
+  this.renderer.setPixelRatio(this.devicePixelRatio)
   this.renderer.setSize(this.width, this.height)
 
   this.scene = new three.Scene()

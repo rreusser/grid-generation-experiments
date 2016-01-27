@@ -21,5 +21,5 @@ module.exports = {
   points: true,
   integrator: 'rk4',
   collapseConfig: Modernizr.touchevents,
-  devicePixelRatio: window.devicePixelRatio, // * (Modernizr.touchevents ? 2 : 1),
+  devicePixelRatio: window.devicePixelRatio,
 }
