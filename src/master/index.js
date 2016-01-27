@@ -6,23 +6,22 @@ var SimulationController = require('./lib/simulation-controller')
 var createDatGui = require('./lib/create-dat-gui')
 var datGuiConfig = require('./config/dat-gui-config')
 
-var config = require('./config/query-params')
+var state = require('./config/query-params')
 
 var viewport = new Viewport ('canvas', {
-  xmin: config.xmin,
-  xmax: config.xmax,
-  ymin: config.ymin,
-  ymax: config.ymax,
+  xmin: state.xmin,
+  xmax: state.xmax,
+  ymin: state.ymin,
+  ymax: state.ymax,
   aspectRatio: 1,
-  devicePixelRatio: window.devicePixelRatio * (Modernizr.touchevents ? 2 : 1),
-  antialias: false,
+  devicePixelRatio: state.devicePixelRatio,
+  antialias: state.antialiasing,
 })
 
-var simulation = new SimulationController('worker-bundle.js', config, viewport)
+var simulation = new SimulationController('worker-bundle.js', state, viewport)
+
+createDatGui(state, datGuiConfig(state, simulation))
 
 simulation.initializeMesh(
   simulation.createMesh
 )
-
-createDatGui(config, datGuiConfig(config, simulation))
-

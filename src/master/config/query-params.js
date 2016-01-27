@@ -28,11 +28,9 @@ extend(config, normalizeQueryParams(location.search, {
   points: 'Boolean',
   collapseConfig: 'Boolean',
   integrator: 'String',
+  antialiasing: 'Boolean',
+  devicePixelRatio: 'Number',
 }))
-
-if (Modernizr.touchevents) {
-  config.collapsedFolders = (config.collapsedFolders || []).concat(['mesh', 'airfoil'])
-}
 
 if (naca.isValid(config.naca)) {
   var airfoil = naca.parse(config.naca)
