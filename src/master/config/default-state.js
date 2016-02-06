@@ -10,7 +10,7 @@ module.exports = {
   stepInc: 0.001,
   stepStart: 0.002,
   diffusion: 0.002,
-  power: 1.0,
+  alpha: 1.0,
   clustering: 20,
   integrator: 'rk4',
 }

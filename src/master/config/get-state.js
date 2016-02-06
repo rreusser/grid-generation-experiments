@@ -18,7 +18,7 @@ extend(config, normalizeQueryParams(location.search, {
   stepStart: 'Number',
   stepInc: 'Number',
   clustering: 'Number',
-  power: 'Number',
+  alpha: 'Number',
   integrator: 'String',
 }))
 

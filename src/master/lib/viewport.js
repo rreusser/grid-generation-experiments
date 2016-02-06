@@ -253,7 +253,16 @@ Viewport.prototype.zoom = function (amount, x0, y0) {
 }
 
 Viewport.prototype.attachMouseWheel = function () {
-  mouseWheel(this.canvas, this.onMouseWheel.bind(this), true)
+  if (!this.mouseWheelListener) {
+    this.mouseWheelListener = mouseWheel(this.canvas, this.onMouseWheel.bind(this), true)
+  }
+}
+
+Viewport.prototype.detachMouseWheel = function () {
+  if (this.mouseWheelListener) {
+    this.canvas.removeEventListener('wheel', this.mouseWheelListener)
+    this.mouseWheelListener = null;
+  }
 }
 
 Viewport.prototype.onMouseWheel = function (dx, dy) {

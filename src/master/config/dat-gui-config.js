@@ -23,7 +23,7 @@ module.exports = function(config, simulation) {
       items: [{
         variables: {
           camber: { range: [0.0, 0.3] },
-          power: { range: [0.5, 1] },
+          alpha: { range: [0, 1] },
         }
       }],
       onChange: onChange,

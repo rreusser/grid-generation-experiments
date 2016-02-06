@@ -5,6 +5,7 @@ var Viewport = require('./lib/viewport')
 var SimulationController = require('./lib/simulation-controller')
 var createDatGui = require('./lib/create-dat-gui')
 var datGuiConfig = require('./config/dat-gui-config')
+var WindowListener = require('./lib/window-listener')
 
 var config = require('./config/get-config')
 var state = require('./config/get-state')
@@ -12,6 +13,8 @@ var state = require('./config/get-state')
 window.onload = function () {
   setTimeout(initialize, 1)
 }
+
+var listener = new WindowListener()
 
 function initialize () {
   var devicePixelRatio = window.devicePixelRatio
@@ -39,4 +42,12 @@ function initialize () {
   simulation.initializeMesh(
     simulation.createMesh
   )
+
+  listener.on('visible', function () {
+  }).on('occluded', function () {
+  }).on('beginFullscreen', function () {
+    viewport.attachMouseWheel()
+  }).on('endFullscreen', function () {
+    viewport.detachMouseWheel()
+  })
 }

@@ -16,11 +16,11 @@ function createVariable (gui, state, name, definition, onChange, onFinishChange)
     if (definition.step) {
       controller.step(definition.step)
     }
-  }
-
-  // A definition with string values:
-  if (definition.values) {
+  } else if (definition.values) {
+    // A definition with string values:
     controller = gui.add(state, name, definition.values)
+  } else if (definition.value) {
+    controller = gui.add(state, name, definition.value)
   }
 
   onChange.push(definition.onChange)
@@ -88,7 +88,6 @@ function createDatGUI (state, config) {
     gui.close()
   }
 
-  console.log(state)
   if (state.closeButton === false) {
     gui.__closeButton.style.display = 'none'
   }

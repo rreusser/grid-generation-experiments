@@ -9,7 +9,7 @@ var hyperbolicGridDerivative = require('./hyperbolic-grid-derivative')
 
 module.exports = Mesher
 
-function Mesher (eta, xi, mesh, diffusion, power) {
+function Mesher (eta, xi, mesh, diffusion, alpha) {
   var x0, y0, x1, y1, dxdeta, dydeta, d2xdeta2, d2ydeta2, dx, dy, f
   this.mesh = mesh
   this.xi = xi
@@ -21,7 +21,7 @@ function Mesher (eta, xi, mesh, diffusion, power) {
 
   this.f = new Float64Array(this.m * 2)
   this.diffusion = diffusion
-  this.power = power
+  this.alpha = alpha
 
   // Work arrays
   this.dxdeta = new Float64Array(this.m)

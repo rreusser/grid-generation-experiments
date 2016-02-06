@@ -24,7 +24,7 @@
     "mouse-change": "^1.2.1",
     "mouse-event": "^1.0.5",
     "mouse-event-offset": "^3.0.2",
-    "mouse-wheel": "^1.0.2",
+    "mouse-wheel": "https://github.com/rreusser/mouse-wheel.git",
     "naca-four-digit-airfoil": "^1.0.4",
     "ndarray": "^1.0.18",
     "ndarray-fill": "^1.0.1",

@@ -30,7 +30,7 @@ function WorkerState () {
     if (changes.m ||
         changes.n ||
         changes.diffusion ||
-        changes.power ||
+        changes.alpha ||
         changes.integrator ||
         changes.stepStart ||
         changes.stepInc ||
@@ -57,7 +57,7 @@ WorkerState.prototype.initialize = function () {
 
   this.xi = ndarray(new Float32Array(n), [n])
 
-  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion, this.state.power)
+  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion, this.state.alpha)
 
   this.needsInitialization = false
 }
@@ -74,7 +74,7 @@ WorkerState.prototype.createMesh = function (data) {
   }
 
   this.mesher.diffusion = this.state.diffusion
-  this.mesher.power = this.state.power
+  this.mesher.alpha = this.state.alpha
   this.mesher.integrator = this.mesher[this.state.integrator]
   this.mesher.march()
 
