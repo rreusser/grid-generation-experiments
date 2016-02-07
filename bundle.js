@@ -38775,7 +38775,7 @@ var listener = new WindowListener()
 function initialize () {
   var devicePixelRatio = window.devicePixelRatio
 
-  if (window.innerWidth <= 400 && !config.antialiasing) {
+  if (window.innerWidth <= 768 && !config.antialiasing) {
     // Fake anti-aliasing for small screens:
     devicePixelRatio *= 2
   }
@@ -38791,7 +38791,7 @@ function initialize () {
     mouseWheel: config.mouseWheel,
   })
 
-  var simulation = new SimulationController('worker-bundle.js', config, state, viewport)
+  var simulation = new SimulationController('worker-bundle.min.js', config, state, viewport)
 
   createDatGui(state, datGuiConfig(config, simulation))
 
