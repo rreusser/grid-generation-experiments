@@ -30,6 +30,17 @@ module.exports = function(config, simulation) {
       onFinishChange: onFinish,
     }
     break;
+  case 2:
+    ret = {
+      items: [{
+        variables: {
+          diffusion: { range: [0.0, 0.002] },
+        }
+      }],
+      onChange: onChange,
+      onFinishChange: onFinish,
+    }
+    break;
   default:
     ret = {
       items: [{
