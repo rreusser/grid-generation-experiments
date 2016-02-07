@@ -6217,7 +6217,7 @@ function hyperbolicGridDerivative (yp, y) {
     dx = this.dxdeta[i]
     dy = this.dydeta[i]
     var ds2 = dx * dx + dy * dy
-    var coeff =  - 1 / Math.pow(ds2, this.power)
+    var coeff =  - 1 / Math.pow(ds2, 0.5 + 0.5 * this.alpha)
     yp[i         ] = - coeff * dy + this.d2xdeta2[i] * this.diffusion
     yp[i + this.m] =   coeff * dx + this.d2ydeta2[i] * this.diffusion
   }
@@ -6341,7 +6341,7 @@ var hyperbolicGridDerivative = require('./hyperbolic-grid-derivative')
 
 module.exports = Mesher
 
-function Mesher (eta, xi, mesh, diffusion, power) {
+function Mesher (eta, xi, mesh, diffusion, alpha) {
   var x0, y0, x1, y1, dxdeta, dydeta, d2xdeta2, d2ydeta2, dx, dy, f
   this.mesh = mesh
   this.xi = xi
@@ -6353,7 +6353,7 @@ function Mesher (eta, xi, mesh, diffusion, power) {
 
   this.f = new Float64Array(this.m * 2)
   this.diffusion = diffusion
-  this.power = power
+  this.alpha = alpha
 
   // Work arrays
   this.dxdeta = new Float64Array(this.m)
@@ -6549,7 +6549,7 @@ function WorkerState () {
     if (changes.m ||
         changes.n ||
         changes.diffusion ||
-        changes.power ||
+        changes.alpha ||
         changes.integrator ||
         changes.stepStart ||
         changes.stepInc ||
@@ -6576,7 +6576,7 @@ WorkerState.prototype.initialize = function () {
 
   this.xi = ndarray(new Float32Array(n), [n])
 
-  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion, this.state.power)
+  this.mesher = new Mesher(this.eta, this.xi, this.mesh, this.state.diffusion, this.state.alpha)
 
   this.needsInitialization = false
 }
@@ -6593,7 +6593,7 @@ WorkerState.prototype.createMesh = function (data) {
   }
 
   this.mesher.diffusion = this.state.diffusion
-  this.mesher.power = this.state.power
+  this.mesher.alpha = this.state.alpha
   this.mesher.integrator = this.mesher[this.state.integrator]
   this.mesher.march()
 

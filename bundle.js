@@ -1084,7 +1084,7 @@ function mouseWheelListen(element, callback, noScroll) {
     element = window
   }
   var lineHeight = toPX('ex', element)
-  element.addEventListener('wheel', function(ev) {
+  var listener = function(ev) {
     if(noScroll) {
       ev.preventDefault()
     }
@@ -1107,8 +1107,11 @@ function mouseWheelListen(element, callback, noScroll) {
     if(dx || dy || dz) {
       return callback(dx, dy, dz)
     }
-  })
+  }
+  element.addEventListener('wheel', listener)
+  return listener
 }
+
 },{"to-px":23}],25:[function(require,module,exports){
 'use strict'
 
@@ -38581,7 +38584,18 @@ module.exports = function(config, simulation) {
       items: [{
         variables: {
           camber: { range: [0.0, 0.3] },
-          power: { range: [0.5, 1] },
+          alpha: { range: [0, 1] },
+        }
+      }],
+      onChange: onChange,
+      onFinishChange: onFinish,
+    }
+    break;
+  case 2:
+    ret = {
+      items: [{
+        variables: {
+          diffusion: { range: [0.0, 0.002] },
         }
       }],
       onChange: onChange,
@@ -38636,11 +38650,25 @@ module.exports = function(config, simulation) {
 'use strict'
 
 module.exports = {
-  naca: null,
   xmin: -0.6,
   xmax: 1.6,
   ymin: -1.0,
   ymax: 1.0,
+  close: [],
+  open: [],
+  hide: [],
+  points: true,
+  collapseConfig: Modernizr.touchevents,
+  devicePixelRatio: window.devicePixelRatio,
+  closeButton: true,
+  mouseWheel: true
+}
+
+},{}],43:[function(require,module,exports){
+'use strict'
+
+module.exports = {
+  naca: null,
   m: 101,
   n: 50,
   thickness: 0.12,
@@ -38649,26 +38677,17 @@ module.exports = {
   stepInc: 0.001,
   stepStart: 0.002,
   diffusion: 0.002,
-  power: 1.0,
+  alpha: 1.0,
   clustering: 20,
-  close: [],
-  open: [],
-  hide: [],
-  points: true,
   integrator: 'rk4',
-  collapseConfig: Modernizr.touchevents,
-  devicePixelRatio: window.devicePixelRatio,
-  closeButton: true,
-  mouseWheel: true
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /* global location, window */
 'use strict'
 
-var queryString = require('query-string')
 var extend = require('util-extend')
-var defaults = require('./defaults')
+var defaults = require('./default-config')
 var naca = require('naca-four-digit-airfoil')
 var normalizeQueryParams = require('../lib/normalize-query-params')
 
@@ -38678,23 +38697,12 @@ extend(config, normalizeQueryParams(location.search, {
   open: ['String'],
   close: ['String'],
   hide: ['String'],
-  thickness: 'Number',
-  camber: 'Number',
-  camberLoc: 'Number',
-  m: 'Integer',
-  n: 'Integer',
-  diffusion: 'Number',
-  stepStart: 'Number',
-  stepInc: 'Number',
-  clustering: 'Number',
   xmin: 'Number',
   xmax: 'Number',
   ymin: 'Number',
   ymax: 'Number',
-  power: 'Number',
   points: 'Boolean',
   collapseConfig: 'Boolean',
-  integrator: 'String',
   antialiasing: 'Boolean',
   devicePixelRatio: 'Number',
   configSet: 'Integer',
@@ -38711,7 +38719,41 @@ if (naca.isValid(config.naca)) {
 
 module.exports = config
 
-},{"../lib/normalize-query-params":48,"./defaults":42,"naca-four-digit-airfoil":25,"query-string":32,"util-extend":39}],44:[function(require,module,exports){
+},{"../lib/normalize-query-params":50,"./default-config":42,"naca-four-digit-airfoil":25,"util-extend":39}],45:[function(require,module,exports){
+/* global location, window */
+'use strict'
+
+var extend = require('util-extend')
+var defaults = require('./default-state')
+var naca = require('naca-four-digit-airfoil')
+var normalizeQueryParams = require('../lib/normalize-query-params')
+
+var config = extend({}, defaults)
+
+extend(config, normalizeQueryParams(location.search, {
+  thickness: 'Number',
+  camber: 'Number',
+  camberLoc: 'Number',
+  m: 'Integer',
+  n: 'Integer',
+  diffusion: 'Number',
+  stepStart: 'Number',
+  stepInc: 'Number',
+  clustering: 'Number',
+  alpha: 'Number',
+  integrator: 'String',
+}))
+
+if (naca.isValid(config.naca)) {
+  var airfoil = naca.parse(config.naca)
+  config.thickness = airfoil.t
+  config.camber = airfoil.m
+  config.camberLoc = airfoil.p
+}
+
+module.exports = config
+
+},{"../lib/normalize-query-params":50,"./default-state":43,"naca-four-digit-airfoil":25,"util-extend":39}],46:[function(require,module,exports){
 /* global location, window */
 'use strict'
 
@@ -38719,41 +38761,54 @@ var Viewport = require('./lib/viewport')
 var SimulationController = require('./lib/simulation-controller')
 var createDatGui = require('./lib/create-dat-gui')
 var datGuiConfig = require('./config/dat-gui-config')
-var state = require('./config/query-params')
+var WindowListener = require('./lib/window-listener')
+
+var config = require('./config/get-config')
+var state = require('./config/get-state')
 
 window.onload = function () {
   setTimeout(initialize, 1)
 }
 
+var listener = new WindowListener()
+
 function initialize () {
   var devicePixelRatio = window.devicePixelRatio
 
-  if (window.innerWidth <= 400 && !state.antialiasing) {
+  if (window.innerWidth <= 400 && !config.antialiasing) {
     // Fake anti-aliasing for small screens:
     devicePixelRatio *= 2
   }
 
   var viewport = new Viewport ('canvas', {
-    xmin: state.xmin,
-    xmax: state.xmax,
-    ymin: state.ymin,
-    ymax: state.ymax,
+    xmin: config.xmin,
+    xmax: config.xmax,
+    ymin: config.ymin,
+    ymax: config.ymax,
     aspectRatio: 1,
     devicePixelRatio: devicePixelRatio,
-    antialias: state.antialiasing,
-    mouseWheel: state.mouseWheel,
+    antialias: config.antialiasing,
+    mouseWheel: config.mouseWheel,
   })
 
-  var simulation = new SimulationController('worker-bundle.min.js', state, viewport)
+  var simulation = new SimulationController('worker-bundle.js', config, state, viewport)
 
-  createDatGui(state, datGuiConfig(state, simulation))
+  createDatGui(state, datGuiConfig(config, simulation))
 
   simulation.initializeMesh(
     simulation.createMesh
   )
+
+  listener.on('visible', function () {
+  }).on('occluded', function () {
+  }).on('beginFullscreen', function () {
+    viewport.attachMouseWheel()
+  }).on('endFullscreen', function () {
+    viewport.detachMouseWheel()
+  })
 }
 
-},{"./config/dat-gui-config":41,"./config/query-params":43,"./lib/create-dat-gui":45,"./lib/simulation-controller":49,"./lib/viewport":51}],45:[function(require,module,exports){
+},{"./config/dat-gui-config":41,"./config/get-config":44,"./config/get-state":45,"./lib/create-dat-gui":47,"./lib/simulation-controller":51,"./lib/viewport":53,"./lib/window-listener":54}],47:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -38772,11 +38827,11 @@ function createVariable (gui, state, name, definition, onChange, onFinishChange)
     if (definition.step) {
       controller.step(definition.step)
     }
-  }
-
-  // A definition with string values:
-  if (definition.values) {
+  } else if (definition.values) {
+    // A definition with string values:
     controller = gui.add(state, name, definition.values)
+  } else if (definition.value) {
+    controller = gui.add(state, name, definition.value)
   }
 
   onChange.push(definition.onChange)
@@ -38844,7 +38899,6 @@ function createDatGUI (state, config) {
     gui.close()
   }
 
-  console.log(state)
   if (state.closeButton === false) {
     gui.__closeButton.style.display = 'none'
   }
@@ -38852,7 +38906,7 @@ function createDatGUI (state, config) {
   return gui
 }
 
-},{"util-extend":39}],46:[function(require,module,exports){
+},{"util-extend":39}],48:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -38904,7 +38958,7 @@ module.exports = function drawMesh (v, mesh, options) {
   }
 }
 
-},{"ndarray-show":26,"three":34}],47:[function(require,module,exports){
+},{"ndarray-show":26,"three":34}],49:[function(require,module,exports){
 'use strict'
 
 var show = require('ndarray-show')
@@ -38935,7 +38989,7 @@ module.exports = function drawPoints (viewport, mesh, n) {
   }
 }
 
-},{"ndarray-show":26,"three":34}],48:[function(require,module,exports){
+},{"ndarray-show":26,"three":34}],50:[function(require,module,exports){
 'use strict'
 
 var queryString = require('query-string')
@@ -38974,15 +39028,16 @@ function cast (data, type) {
     } else {
       return [cast(data, nestedType)]
     }
-  default:
   case "String":
     return String(data)
     break;
+  default:
+    return null
   }
 }
 
 function normalizeQueryParams (str, typeDefs) {
-  var i, params, output, keys, key
+  var i, params, output, keys, key, value
 
   output = {}
   params = queryString.parse(str)
@@ -38990,13 +39045,16 @@ function normalizeQueryParams (str, typeDefs) {
 
   for (i = 0; i < keys.length; i++) {
     key = keys[i]
-    output[key] = cast(params[key], typeDefs[key])
+    value = cast(params[key], typeDefs[key])
+    if (value !== null) {
+      output[key] = value
+    }
   }
 
   return output
 }
 
-},{"query-string":32}],49:[function(require,module,exports){
+},{"query-string":32}],51:[function(require,module,exports){
 'use strict'
 
 var WorkDispatcher = require('./work-dispatcher')
@@ -39006,7 +39064,7 @@ var coerce = require('../../lib/ndarray-coerce')
 
 module.exports = SimulationController
 
-function SimulationController (code, config, viewport) {
+function SimulationController (code, config, state, viewport) {
   var dispatcher = new WorkDispatcher('worker-bundle.js')
 
   var mesh, eta, xi
@@ -39023,7 +39081,7 @@ function SimulationController (code, config, viewport) {
 
   this.initializeMesh = function initializeMesh (cb, force) {
     dispatcher.request('initializeGrid', {
-      params: config,
+      params: state,
     }, [], force).then(function(result) {
 
       mesh = coerce(result.mesh)
@@ -39041,7 +39099,7 @@ function SimulationController (code, config, viewport) {
     if (!mesh) return
 
     dispatcher.request('createMesh', {
-      params: config,
+      params: state,
       initial: mesh.pick(0),
       eta: eta
     }, [], force).then(function(result) {
@@ -39063,7 +39121,7 @@ function SimulationController (code, config, viewport) {
   dispatcher.start()
 }
 
-},{"../../lib/ndarray-coerce":40,"./draw-mesh":46,"./draw-points":47,"./work-dispatcher":52}],50:[function(require,module,exports){
+},{"../../lib/ndarray-coerce":40,"./draw-mesh":48,"./draw-points":49,"./work-dispatcher":55}],52:[function(require,module,exports){
 /**
  * @author alteredq / http://alteredqualia.com/
  * @author mr.doob / http://mrdoob.com/
@@ -39145,7 +39203,7 @@ if ( typeof module === 'object' ) {
 
 }
 
-},{}],51:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict'
 
 var Detector = require('./threejs-detector.js')
@@ -39401,7 +39459,16 @@ Viewport.prototype.zoom = function (amount, x0, y0) {
 }
 
 Viewport.prototype.attachMouseWheel = function () {
-  mouseWheel(this.canvas, this.onMouseWheel.bind(this), true)
+  if (!this.mouseWheelListener) {
+    this.mouseWheelListener = mouseWheel(this.canvas, this.onMouseWheel.bind(this), true)
+  }
+}
+
+Viewport.prototype.detachMouseWheel = function () {
+  if (this.mouseWheelListener) {
+    this.canvas.removeEventListener('wheel', this.mouseWheelListener)
+    this.mouseWheelListener = null;
+  }
 }
 
 Viewport.prototype.onMouseWheel = function (dx, dy) {
@@ -39460,7 +39527,34 @@ Viewport.prototype.applyAspectRatio = function () {
   this.camera.top = yc + dy
 }
 
-},{"./threejs-detector.js":50,"mouse-change":18,"mouse-event":21,"mouse-event-offset":20,"mouse-wheel":24,"three":34,"touch-pinch":35,"util-extend":39}],52:[function(require,module,exports){
+},{"./threejs-detector.js":52,"mouse-change":18,"mouse-event":21,"mouse-event-offset":20,"mouse-wheel":24,"three":34,"touch-pinch":35,"util-extend":39}],54:[function(require,module,exports){
+'use strict'
+
+var EventEmitter = require('event-emitter')
+
+module.exports = WindowListener
+
+function WindowListener () {
+  EventEmitter(this)
+
+  window.addEventListener('message', this.handleMessage.bind(this), false)
+}
+
+
+WindowListener.prototype.handleMessage = function (event) {
+  if (!event.data) return
+
+  var type = event.data.event
+  var data = event.data.data
+
+  if (type) {
+    this.emit(type, data)
+  }
+}
+
+
+
+},{"event-emitter":2}],55:[function(require,module,exports){
 'use strict'
 
 var extend = require('util-extend')
@@ -39548,4 +39642,4 @@ WorkDispatcher.prototype.start = function (task, data) {
   }.bind(this), false)
 }
 
-},{"event-emitter":2,"guid":17,"util-extend":39}]},{},[44]);
+},{"event-emitter":2,"guid":17,"util-extend":39}]},{},[46]);
